@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marimo-apper som statiske dataapper</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f6feb'/%3E%3Cpath d='M8 22V10h4l4 6 4-6h4v12h-4v-6l-4 6-4-6v6H8z' fill='white'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --ink: #172033;
+      --muted: #5d697c;
+      --line: #d9e0ea;
+      --blue: #1f6feb;
+      --green: #238636;
+      --amber: #b7791f;
+      --red: #c2410c;
+      --code: #101827;
+      --code-line: #243047;
+      --soft-blue: #eaf2ff;
+      --soft-green: #e9f7ee;
+      --soft-amber: #fff6df;
+      --soft-red: #fff0ea;
+      --shadow: 0 12px 35px rgba(23, 32, 51, 0.08);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 28px;
+      align-items: stretch;
+      min-height: 430px;
+      padding: 38px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 16px;
+      color: var(--blue);
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+      line-height: 1.12;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 5vw, 4.1rem);
+      max-width: 840px;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 1.18rem;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .lead {
+      margin-top: 18px;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #344055;
+      font-size: 0.9rem;
+      font-weight: 650;
+      border: 1px solid #dce3ed;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex: 0 0 auto;
+    }
+
+    .hero-visual {
+      display: grid;
+      align-content: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .browser {
+      background: #f9fbff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .browser-top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 36px;
+      padding: 0 13px;
+      background: #eef3fb;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .window-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #8da2be;
+    }
+
+    .browser-body {
+      padding: 18px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      padding: 12px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+    }
+
+    .metric strong {
+      font-size: 1.25rem;
+    }
+
+    .bars {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: end;
+      gap: 8px;
+      height: 120px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .bar {
+      min-height: 16px;
+      border-radius: 4px 4px 0 0;
+      background: var(--blue);
+    }
+
+    .section {
+      margin-top: 28px;
+      padding: 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 4px 18px rgba(23, 32, 51, 0.04);
+    }
+
+    .section-intro {
+      max-width: 860px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      min-width: 0;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .diagram {
+      margin-top: 20px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      overflow-x: auto;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(145px, 1fr));
+      gap: 14px;
+      align-items: center;
+      min-width: 820px;
+    }
+
+    .flow.three {
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      min-width: 620px;
+    }
+
+    .flow-box {
+      position: relative;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      min-height: 116px;
+    }
+
+    .flow-box strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .flow-box span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .flow-box:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -14px;
+      width: 14px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      margin-bottom: 10px;
+    }
+
+    .blue { background: var(--soft-blue); }
+    .green { background: var(--soft-green); }
+    .amber { background: var(--soft-amber); }
+    .red { background: var(--soft-red); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .code-block {
+      margin: 14px 0 0;
+      background: var(--code);
+      color: #dbe7ff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #263651;
+    }
+
+    .code-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--code-line);
+      color: #b9c8df;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    pre {
+      margin: 0;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      tab-size: 2;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    .note {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fbfcfe;
+      color: var(--muted);
+    }
+
+    .note strong {
+      color: var(--ink);
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      display: table;
+      margin-top: 18px;
+    }
+
+    .matrix th, .matrix td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix th {
+      background: #eef3fb;
+      font-size: 0.86rem;
+    }
+
+    .matrix tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .step-no {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: #fff;
+      font-weight: 800;
+      background: var(--blue);
+    }
+
+    .step-body {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .footer {
+      margin-top: 28px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 920px) {
+      .hero, .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 26px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .page {
+        padding: 18px 14px 48px;
+      }
+
+      .hero, .section {
+        padding: 20px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 2.2rem;
+      }
+
+      h2 {
+        font-size: 1.55rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Arbeidsmønster for marimo + GitHub Pages</p>
+        <h1>Statiske marimo-apper med raske lokale SQL-spørringer</h1>
+        <p class="lead">
+          Vi kan bygge interaktive analyseapper som kjører rett i nettleseren, publiseres
+          på GitHub Pages og bruker data-snapshots fra Postgres uten å eksponere
+          connection strings til sluttbrukeren.
+        </p>
+        <div class="hero-actions">
+          <span class="pill"><span class="dot"></span> marimo WASM</span>
+          <span class="pill"><span class="dot" style="background: var(--green)"></span> Polars</span>
+          <span class="pill"><span class="dot" style="background: var(--amber)"></span> Parquet</span>
+          <span class="pill"><span class="dot" style="background: var(--red)"></span> DuckDB-WASM</span>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-label="Eksempel på analyseapp">
+        <div class="browser">
+          <div class="browser-top">
+            <span class="window-dot"></span>
+            <span class="window-dot"></span>
+            <span class="window-dot"></span>
+          </div>
+          <div class="browser-body">
+            <div class="metric-grid">
+              <div class="metric"><span>Kunder</span><strong>38 421</strong></div>
+              <div class="metric"><span>Snapshot</span><strong>Parquet</strong></div>
+              <div class="metric"><span>Spørring</span><strong>DuckDB</strong></div>
+              <div class="metric"><span>Runtime</span><strong>Browser</strong></div>
+            </div>
+            <div class="bars">
+              <span class="bar" style="height: 42%"></span>
+              <span class="bar" style="height: 70%; background: var(--green)"></span>
+              <span class="bar" style="height: 55%; background: var(--amber)"></span>
+              <span class="bar" style="height: 88%"></span>
+              <span class="bar" style="height: 64%; background: var(--green)"></span>
+              <span class="bar" style="height: 38%; background: var(--red)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Kortversjonen</h2>
+      <p class="section-intro">
+        Det vi har validert er en enkel og robust modell: bygg dataene på server-siden
+        i GitHub Actions, publiser dem som statiske Parquet-filer, og la marimo-appen
+        kjøre interaksjon og spørringer lokalt i brukerens nettleser.
+      </p>
+      <div class="cards">
+        <article class="card blue">
+          <span class="tag">Notebook</span>
+          <h3>marimo som appfil</h3>
+          <p>
+            Notebooken er en vanlig Python-fil. Den kan utvikles i Cursor, kjøres i
+            marimo-browseren og eksporteres som WASM-app til GitHub Pages.
+          </p>
+        </article>
+        <article class="card green">
+          <span class="tag">Dataframe</span>
+          <h3>Polars i pipeline</h3>
+          <p>
+            Bruk Polars til datavask, aggregering og Parquet-skriving i build-steget.
+            Det gir en rask, tydelig og kolonneorientert dataflyt.
+          </p>
+        </article>
+        <article class="card amber">
+          <span class="tag">Runtime</span>
+          <h3>DuckDB-WASM i nettleseren</h3>
+          <p>
+            Browser-appen laster Parquet-filen som bytes og lar DuckDB kjøre SQL lokalt.
+            Ingen databasekall skjer når sluttbrukeren åpner appen.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Oppsett fra tom mappe til paired Codex</h2>
+      <p class="section-intro">
+        Dette var grunnflyten vi brukte for å komme i gang: først et lite uv-basert
+        marimo-prosjekt, deretter marimo i browser, og til slutt pairing slik at Codex
+        kunne jobbe direkte mot den aktive notebook-kernelen.
+      </p>
+
+      <div class="timeline">
+        <div class="step">
+          <div class="step-no">1</div>
+          <div class="step-body">
+            <h3>Lag prosjekt og avhengigheter</h3>
+            <p>
+              Vi startet i en tom mappe og brukte <code>pyproject.toml</code> med
+              marimo og analysebiblioteker. For nye apper bruker vi Polars som
+              standard dataframe-verktøy.
+            </p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">2</div>
+          <div class="step-body">
+            <h3>Kjør marimo i browseren</h3>
+            <p>
+              Browser-visningen er den beste arbeidsflaten for selve marimo-appen,
+              mens Cursor er best for filredigering, git og agentarbeid.
+            </p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">3</div>
+          <div class="step-body">
+            <h3>Installer marimo-pair skillen</h3>
+            <p>
+              Pair-funksjonen gir agenten tilgang til en kjørende marimo-session,
+              slik at den kan kjøre kode, inspisere variabler og endre celler.
+            </p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">4</div>
+          <div class="step-body">
+            <h3>Koble Codex til notebooken</h3>
+            <p>
+              Fra marimo-browseren åpnet vi <strong>Pair with an agent</strong>,
+              valgte Codex, og brukte tokenen/kommandoen som marimo viste.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">pyproject.toml for en ny marimo-app</div>
+        <pre><code>[project]
+name = "min-marimo-app"
+version = "0.1.0"
+requires-python = "&gt;=3.11"
+dependencies = [
+  "marimo&gt;=0.23.3",
+  "polars&gt;=1.0.0",
+  "duckdb&gt;=1.2.0",
+]
+
+[tool.uv]
+package = false</code></pre>
+      </div>
+
+      <div class="two-col">
+        <div class="code-block">
+          <div class="code-title">Start lokalt</div>
+          <pre><code>uv sync
+uv run marimo edit customer_churn_demo.py</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-title">Start som read-only app</div>
+          <pre><code>uv run marimo run customer_churn_demo.py</code></pre>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Cursor/VS Code:</strong> marimo-filen er fortsatt en vanlig
+        <code>.py</code>-fil. Med marimo-extensionen kan den åpnes som notebook i
+        editoren, men vi erfarte at browser-viewet gir en renere app-opplevelse.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Codex pairing med marimo</h2>
+      <p class="section-intro">
+        Pairing er det som gjorde at Codex kunne arbeide inne i den aktive notebooken,
+        ikke bare redigere Python-filen på disk. Det er nyttig når vi vil at agenten
+        skal se notebook-state, kjøre celler, eksportere tabeller eller gjøre raske
+        eksperimenter direkte i marimo.
+      </p>
+
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-box blue">
+            <strong>marimo browser</strong>
+            <span>Notebooken kjører på <code>localhost</code>.</span>
+          </div>
+          <div class="flow-box amber">
+            <strong>Pair-dialog</strong>
+            <span>Velg Codex og kopier kommando/token.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>marimo-pair skill</strong>
+            <span>Installeres med <code>npx skills add</code>.</span>
+          </div>
+          <div class="flow-box blue">
+            <strong>Codex</strong>
+            <span>Agenten sender kode inn i notebook-kernelen.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Live output</strong>
+            <span>Endringer og resultater vises i browseren.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">Installer pair-skillen</div>
+        <pre><code>npx skills add marimo-team/marimo-pair</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">Kommandoen marimo viser i Pair with an agent</div>
+        <pre><code>codex "$(uvx marimo@latest pair prompt \
+  --url 'http://localhost:2718/' \
+  --with-token \
+  --codex)"</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>Token:</strong> marimo viser en kort token i Pair-dialogen. Den skal
+        ikke committes. Den brukes bare for å koble agenten til den lokale, kjørende
+        notebook-sessionen.
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">Hva agenten kan gjøre når pairing virker</div>
+        <pre><code># Eksempler på oppgaver Codex kan gjøre i en paired notebook:
+# - kjøre alle celler på nytt
+# - lese variabler som top_customers eller segment_summary
+# - legge til nye celler
+# - eksportere tabeller til Excel
+# - teste DuckDB/Parquet-kode i browser-runtime
+# - sende mo.status.toast(...) som synlig bekreftelse</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>Praktisk regel:</strong> Når notebooken kjører og er paired, bør celler
+        endres gjennom marimo-kernelen. Direkte filskriving kan bli overskrevet av
+        marimo dersom den levende notebook-state er nyere enn filen.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Figur 1: utvikling og publisering</h2>
+      <p class="section-intro">
+        For vanlige analyseapper holder det at vi jobber i marimo/Cursor, pusher til
+        GitHub, og lar Actions bygge en ferdig Pages-app.
+      </p>
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-box blue">
+            <strong>1. Utvikle</strong>
+            <span>Notebooken skrives som <code>.py</code> med marimo-celler.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>2. Test lokalt</strong>
+            <span><code>uv run marimo edit app.py</code> i browser eller Cursor.</span>
+          </div>
+          <div class="flow-box amber">
+            <strong>3. Push</strong>
+            <span>Endringer pushes til <code>main</code>.</span>
+          </div>
+          <div class="flow-box blue">
+            <strong>4. Build</strong>
+            <span>GitHub Actions kjører <code>marimo export html-wasm</code>.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>5. Del lenke</strong>
+            <span>GitHub Pages serverer appen som statiske filer.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Figur 2: Postgres til Parquet til DuckDB-WASM</h2>
+      <p class="section-intro">
+        Dette er anbefalt variant for databasebaserte apper. Connection string ligger i
+        GitHub Secrets og brukes bare når workflowen bygger appen.
+      </p>
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-box red">
+            <strong>Postgres</strong>
+            <span>Read-only bruker mot ett view eller eksplisitt query.</span>
+          </div>
+          <div class="flow-box amber">
+            <strong>GitHub Secret</strong>
+            <span><code>POSTGRES_URL</code> er kun tilgjengelig i Actions.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Polars</strong>
+            <span>Henter, vasker og skriver snapshot til Parquet.</span>
+          </div>
+          <div class="flow-box blue">
+            <strong>GitHub Pages</strong>
+            <span>Publiserer <code>data/snapshot.parquet</code> og app-assets.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Browser</strong>
+            <span>marimo + DuckDB-WASM spør Parquet lokalt.</span>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <strong>Viktig:</strong> Det skjer ingen Postgres-spørring når brukeren åpner
+        appen. Brukeren laster bare statiske filer fra GitHub Pages.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Azure Static Web Apps med Parquet-snapshots</h2>
+      <p class="section-intro">
+        GitHub Pages-sporet over fungerer fint for åpne, statiske demoer. Hvis vi
+        allerede har Azure Static Web Apps tilgjengelig, kan vi bruke samme
+        marimo/WASM-prinsipp der: appen er statisk, mens Postgres bare brukes i
+        build-steget for å lage Parquet-snapshotet.
+      </p>
+
+      <div class="diagram">
+        <div class="flow">
+          <div class="flow-box red">
+            <strong>Azure Postgres</strong>
+            <span>Database/view med read-only tilgang for snapshot-jobben.</span>
+          </div>
+          <div class="flow-box amber">
+            <strong>GitHub Actions</strong>
+            <span>Henter secret og bygger datafilen ved push eller schedule.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Polars</strong>
+            <span>Leser Postgres og skriver komprimert Parquet.</span>
+          </div>
+          <div class="flow-box blue">
+            <strong>Azure SWA</strong>
+            <span>Publiserer marimo HTML/WASM-assets og <code>data/*.parquet</code>.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Browser</strong>
+            <span>DuckDB-WASM kjører SQL lokalt mot snapshotet.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <article class="card green">
+          <span class="tag">Hvorfor SWA</span>
+          <h3>God Azure-integrasjon</h3>
+          <p>
+            SWA passer godt hvis appen skal leve i Azure-landskapet vårt, bruke egne
+            domener, tilgangsstyring eller senere få et server-side API.
+          </p>
+        </article>
+        <article class="card amber">
+          <span class="tag">Hvorfor snapshot</span>
+          <h3>Ingen live DB-avhengighet</h3>
+          <p>
+            Sluttbrukeren belaster ikke Postgres. Appen laster bare statiske filer
+            fra SWA, og all filtrering/spørring skjer i browseren.
+          </p>
+        </article>
+        <article class="card blue">
+          <span class="tag">Hvorfor DuckDB</span>
+          <h3>Raske lokale queries</h3>
+          <p>
+            Parquet holder data kompakt, og DuckDB-WASM gir SQL over snapshotet uten
+            backend-kall for hvert filter eller dashboardvalg.
+          </p>
+        </article>
+      </div>
+
+      <div class="note">
+        <strong>Hovedregel:</strong> selv på Azure SWA bør marimo-appen ikke koble
+        direkte til Postgres fra nettleseren. Connection string ligger i GitHub/Azure
+        secrets og brukes bare av build-jobben.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>SWA workflow for snapshot-modellen</h2>
+      <p class="section-intro">
+        SWA-deployen ligner GitHub Pages, men bruker Azure sin deploy-action og en
+        deployment token. Først bygger vi data til <code>dist/data</code>, deretter
+        eksporterer vi marimo-appen til <code>dist/index.html</code>, og til slutt
+        laster vi hele <code>dist/</code> opp til SWA.
+      </p>
+
+      <div class="code-block">
+        <div class="code-title">.github/workflows/deploy-azure-swa.yml</div>
+        <pre><code>name: Deploy marimo app to Azure Static Web Apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "15 5 * * *"  # daglig snapshot, juster ved behov
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build Postgres snapshot
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          rm -rf dist
+          mkdir -p dist/data
+          uv run --with polars --with connectorx --with pyarrow \
+            python scripts/export_snapshot.py
+
+      - name: Export marimo WASM app
+        run: |
+          uv run marimo export html-wasm customer_churn_demo.py \
+            -o dist/index.html \
+            --mode run \
+            --no-show-code \
+            --force
+          rm -f dist/CLAUDE.md dist/AGENTS.md dist/agents.md
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          output_location: ""
+          skip_app_build: true</code></pre>
+      </div>
+
+      <div class="two-col">
+        <div class="note">
+          <strong>Secrets:</strong> <code>POSTGRES_URL</code> brukes av snapshot-scriptet.
+          <code>AZURE_STATIC_WEB_APPS_API_TOKEN</code> hentes fra Azure SWA-ressursen og
+          brukes bare av deploy-steget.
+        </div>
+        <div class="note">
+          <strong>Oppdatering:</strong> data oppdateres ved push, manuell
+          <code>workflow_dispatch</code>, eller schedule. Bruk schedule hvis appen skal ha
+          faste dagsferske snapshots uten kodeendringer.
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>GitHub Pages vs Azure SWA</h2>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Valg</th>
+            <th>Bruk når</th>
+            <th>Datamønster</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GitHub Pages</td>
+            <td>Demoer, åpne interne prototyper, enkel publisering fra repo.</td>
+            <td>Samme Parquet-snapshot. Ingen secrets i browser.</td>
+          </tr>
+          <tr>
+            <td>Azure Static Web Apps</td>
+            <td>Azure-nær drift, egne domener, tilgangsstyring, mulig senere API.</td>
+            <td>Samme Parquet-snapshot. Build-jobb henter fra Azure Postgres.</td>
+          </tr>
+          <tr>
+            <td>SWA + live API</td>
+            <td>Når data må være live og brukervalg skal treffe server-side queries.</td>
+            <td>Ikke snapshot. Krever Azure Functions/API og mer drift.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <strong>Anbefaling nå:</strong> bruk Azure SWA med Parquet-snapshot for apper
+        der data kan være oppdatert ved deploy eller på schedule. Det gir lav kompleksitet
+        og god ytelse uten live databaseeksponering.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Hva vi har validert</h2>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Spørsmål</th>
+            <th>Resultat</th>
+            <th>Konsekvens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Kan marimo eksporteres til en installasjonsfri app?</td>
+            <td>Ja, med <code>marimo export html-wasm</code>.</td>
+            <td>Mottaker trenger bare nettleser, men filene må serveres over HTTP.</td>
+          </tr>
+          <tr>
+            <td>Kan GitHub Pages brukes?</td>
+            <td>Ja, med GitHub Actions deploy.</td>
+            <td>Push til <code>main</code> kan automatisk bygge og publisere appen.</td>
+          </tr>
+          <tr>
+            <td>Kan appen hente direkte fra Postgres?</td>
+            <td>Ikke anbefalt i en statisk browser-app.</td>
+            <td>Credentials ville blitt offentlige, og Postgres er ikke et browser-API.</td>
+          </tr>
+          <tr>
+            <td>Kan DuckDB kjøre i marimo WASM?</td>
+            <td>Ja, testet i browser med SQL og tabelloutput.</td>
+            <td>Vi kan gjøre lokale SQL-spørringer i appen.</td>
+          </tr>
+          <tr>
+            <td>Kan DuckDB lese statisk Parquet?</td>
+            <td>Ja, når Parquet først fetches til Pyodide-filsystemet.</td>
+            <td>Bruk <code>pyfetch("../data/file.parquet")</code> og skriv til <code>/tmp</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Polars-basert dataeksport fra Postgres</h2>
+      <p class="section-intro">
+        I build-steget bør vi hente data fra Postgres og skrive en optimalisert Parquet-fil.
+        Eksempelet under bruker Polars, og kan kjøres i GitHub Actions.
+      </p>
+      <div class="two-col">
+        <div>
+          <h3>Eksempel: <code>scripts/export_snapshot.py</code></h3>
+          <p class="section-intro">
+            Scriptet leser connection string fra miljøvariabel, henter et begrenset view,
+            gjør enkle transformasjoner og skriver Parquet til <code>dist/data/</code>.
+          </p>
+        </div>
+        <div class="note">
+          <strong>Prinsipp:</strong> Dataene som publiseres kan være offentlige. Secret-en
+          skal aldri inn i notebooken eller i <code>dist/</code>.
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-title">scripts/export_snapshot.py</div>
+        <pre><code>from pathlib import Path
+import os
+import polars as pl
+
+POSTGRES_URL = os.environ["POSTGRES_URL"]
+OUT = Path("dist/data/customer_snapshot.parquet")
+OUT.parent.mkdir(parents=True, exist_ok=True)
+
+query = """
+select
+  customer_id,
+  segment,
+  monthly_revenue,
+  support_cases,
+  tenure_months,
+  usage_score,
+  churn_risk
+from analytics.customer_churn_snapshot
+where is_active = true
+"""
+
+df = pl.read_database_uri(query=query, uri=POSTGRES_URL)
+
+snapshot = (
+    df
+    .with_columns(
+        expected_loss=(pl.col("monthly_revenue") * pl.col("churn_risk")).round(0),
+        risk_bucket=pl.when(pl.col("churn_risk") &lt; 0.12).then(pl.lit("Lav"))
+          .when(pl.col("churn_risk") &lt; 0.25).then(pl.lit("Middels"))
+          .otherwise(pl.lit("Hoy")),
+    )
+    .select(
+        "customer_id",
+        "segment",
+        "monthly_revenue",
+        "support_cases",
+        "tenure_months",
+        "usage_score",
+        "churn_risk",
+        "expected_loss",
+        "risk_bucket",
+    )
+)
+
+snapshot.write_parquet(
+    OUT,
+    compression="zstd",
+    statistics=True,
+)
+
+print(f"Wrote {snapshot.height:,} rows to {OUT}")</code></pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>GitHub Actions: bygg data og app</h2>
+      <p class="section-intro">
+        Workflowen må gjøre to ting: lage Parquet-snapshotet først, og deretter eksportere
+        marimo-appen. Appen og datafilen lastes opp som ett Pages-artifact.
+      </p>
+      <div class="code-block">
+        <div class="code-title">.github/workflows/deploy-pages.yml</div>
+        <pre><code>name: Deploy marimo app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build data snapshot from Postgres
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          mkdir -p dist/data
+          uv run --with polars --with connectorx --with pyarrow \
+            python scripts/export_snapshot.py
+
+      - name: Export marimo WASM app
+        run: |
+          uv run marimo export html-wasm customer_churn_demo.py \
+            -o dist/index.html \
+            --mode run \
+            --no-show-code \
+            --force
+          rm -f dist/CLAUDE.md dist/AGENTS.md dist/agents.md
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4</code></pre>
+      </div>
+      <div class="note">
+        <strong>Merk:</strong> Dette gir snapshots. Hvis data må være live, trenger vi
+        en backend/API mellom appen og Postgres.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>marimo-app med DuckDB-WASM og Parquet</h2>
+      <p class="section-intro">
+        I browseren må Parquet-filen hentes som bytes og skrives til Pyodide sitt
+        lokale filsystem før DuckDB kan lese den. I GitHub Pages ligger appens worker
+        under <code>assets/</code>, derfor bruker vi <code>../data/...</code>.
+      </p>
+      <div class="code-block">
+        <div class="code-title">customer_churn_demo.py</div>
+        <pre><code># /// script
+# requires-python = "&gt;=3.11"
+# dependencies = [
+#   "duckdb&gt;=1.2.0",
+#   "marimo&gt;=0.23.3",
+#   "polars&gt;=1.0.0",
+# ]
+# ///
+
+import marimo
+
+app = marimo.App(width="full")
+
+
+@app.cell
+def _():
+    import duckdb
+    import marimo as mo
+    import polars as pl
+    from pathlib import Path
+    from pyodide.http import pyfetch
+    return Path, duckdb, mo, pl, pyfetch
+
+
+@app.cell
+async def _(Path, pyfetch):
+    response = await pyfetch("../data/customer_snapshot.parquet")
+    parquet_path = Path("/tmp/customer_snapshot.parquet")
+    parquet_path.write_bytes(await response.bytes())
+    return parquet_path
+
+
+@app.cell
+def _(duckdb, parquet_path, pl):
+    segment_summary = duckdb.sql(f"""
+        select
+          segment,
+          count(*) as customers,
+          sum(monthly_revenue) as revenue,
+          avg(churn_risk) as avg_risk,
+          sum(expected_loss) as expected_loss
+        from read_parquet('{parquet_path}')
+        group by segment
+        order by expected_loss desc
+    """).pl()
+
+    # DuckDB returns an Arrow-backed result; keep working in Polars.
+    segment_summary = segment_summary.with_columns(
+        pl.col("avg_risk").round(3),
+        pl.col("revenue").round(0),
+        pl.col("expected_loss").round(0),
+    )
+    return segment_summary
+
+
+@app.cell
+def _(mo, segment_summary):
+    mo.ui.table(segment_summary, page_size=20)
+    return</code></pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Figur 3: hvor koden kjører</h2>
+      <p class="section-intro">
+        Det viktigste skillet er build-time versus runtime. Secrets og Postgres-tilgang
+        finnes bare i build-time. Sluttbrukeren får bare ferdig app og ferdige data.
+      </p>
+      <div class="diagram">
+        <div class="flow three">
+          <div class="flow-box red">
+            <strong>Build-time</strong>
+            <span>GitHub Actions, secrets, Postgres, Polars, Parquet-skriving.</span>
+          </div>
+          <div class="flow-box amber">
+            <strong>Static hosting</strong>
+            <span>GitHub Pages serverer HTML, JS, WASM-assets og Parquet.</span>
+          </div>
+          <div class="flow-box green">
+            <strong>Runtime</strong>
+            <span>Brukerens nettleser kjører marimo, Pyodide og DuckDB-WASM.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Anbefalt prosjektstruktur</h2>
+      <div class="code-block">
+        <div class="code-title">Mapper og filer</div>
+        <pre><code>.
+├── customer_churn_demo.py              # marimo app
+├── scripts/
+│   ├── export_snapshot.py              # Postgres -&gt; Polars -&gt; Parquet
+│   └── build-gh-pages.sh               # marimo export + opprydding
+├── .github/workflows/deploy-pages.yml  # automatisk Pages deploy
+├── dist/
+│   ├── index.html                      # generert app
+│   ├── assets/                         # genererte marimo-assets
+│   └── data/
+│       └── customer_snapshot.parquet   # generert snapshot
+└── docs/
+    └── marimo_apps_guide.html          # denne guiden</code></pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Beslutningsregler</h2>
+      <div class="timeline">
+        <div class="step">
+          <div class="step-no">1</div>
+          <div class="step-body">
+            <h3>Bruk statisk Parquet når data kan være et snapshot</h3>
+            <p>Dette er enklest, raskest å hoste og tryggest for database-credentials.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">2</div>
+          <div class="step-body">
+            <h3>Bruk backend/API når data må være live</h3>
+            <p>GitHub Pages er statisk. Live database krever et serverledd med auth og rate limiting.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">3</div>
+          <div class="step-body">
+            <h3>Ikke legg connection string i notebooken</h3>
+            <p>Selv read-only credentials blir offentlige hvis de legges i en WASM/Pages-app.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-no">4</div>
+          <div class="step-body">
+            <h3>Bruk <code>width="full"</code> for tabell- og dashboard-apper</h3>
+            <p>Det gir bedre arbeidsflate og reduserer unødvendig horisontal scrolling.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">
+      Basert på testene i repoet: marimo WASM på GitHub Pages, automatisk Actions-deploy,
+      DuckDB i browser og Parquet-lesing via <code>pyfetch</code>.
+    </p>
+  </main>
+</body>
+</html>
