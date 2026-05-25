@@ -62,8 +62,25 @@ async def _(Path, pl, pyfetch):
 @app.cell
 def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
     def excel_download(_data, _filename, _title, _sheet_name="Data"):
-        _export_data = _data.with_columns(
-            (pl.col("markedsandel") / 100).alias("markedsandel")
+        _index_columns = [
+            _column
+            for _column in ["serie", "ms", "tilbyder"]
+            if _column in _data.columns
+        ]
+        _years = sorted(_data["ar"].unique().to_list())
+        _export_data = (
+            _data.with_columns(
+                (pl.col("markedsandel") / 100).alias("markedsandel"),
+                pl.col("ar").cast(pl.Utf8),
+            )
+            .pivot(
+                values="markedsandel",
+                index=_index_columns,
+                on="ar",
+                aggregate_function="first",
+            )
+            .select(_index_columns + [str(_year) for _year in _years])
+            .sort(_index_columns)
         )
         _headers = _export_data.columns
         _workbook = Workbook()
@@ -102,8 +119,8 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
             for _cell in _row:
                 _cell.border = _border
                 if _cell.column_letter == "A":
-                    _cell.alignment = Alignment(horizontal="center")
-                if _headers[_cell.column - 1] == "markedsandel":
+                    _cell.alignment = Alignment(horizontal="left")
+                if _headers[_cell.column - 1] in [str(_year) for _year in _years]:
                     _cell.number_format = "0.0%"
 
         _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
