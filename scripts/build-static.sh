@@ -13,3 +13,5 @@ uv run marimo export html mobilanalyse.py \
   --output dist/index.html \
   --no-include-code \
   --force
+
+uv run python scripts/finalize_static_html.py

@@ -15,6 +15,7 @@ app = marimo.App(width="full")
 def _():
     import marimo as mo
     from mobilanalyse_generated import (
+        EXPORT_PATHS,
         FIG1_PERIOD_TEXT,
         FIG1_SUMMARY_LINES,
         FIG2_NOTE,
@@ -31,10 +32,19 @@ def _():
         </div>
         """
 
-    def figure_panel(title: str, image_path: str, alt: str) -> str:
+    def figure_panel(key: str, title: str, image_path: str, excel_path: str, alt: str) -> str:
+        png_name = image_path.rsplit("/", 1)[-1]
+        excel_name = excel_path.rsplit("/", 1)[-1]
         return f"""
         <section class="figure-panel">
             <div class="figure-panel__title">{title}</div>
+            <details class="export-menu" name="figure-export-menu">
+                <summary class="export-menu__trigger" aria-label="Eksportvalg for {title}">&#9776;</summary>
+                <div class="export-menu__content">
+                    <a href="{excel_path}" download="{excel_name}">Last ned Excel</a>
+                    <a href="{image_path}" download="{png_name}">Last ned PNG</a>
+                </div>
+            </details>
             <img class="figure-panel__image" src="{image_path}" alt="{alt}">
         </section>
         """
@@ -67,6 +77,7 @@ def _():
             }
 
             .figure-panel {
+                position: relative;
                 min-width: 0;
             }
 
@@ -82,6 +93,66 @@ def _():
                 display: block;
                 width: 100%;
                 height: auto;
+            }
+
+            .export-menu {
+                position: absolute;
+                top: 34px;
+                right: 7%;
+                z-index: 10;
+            }
+
+            .export-menu__trigger {
+                display: grid;
+                place-items: center;
+                width: 38px;
+                height: 38px;
+                border: 1px solid transparent;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.86);
+                color: #617083;
+                cursor: pointer;
+                font-size: 1.45rem;
+                line-height: 1;
+                list-style: none;
+                box-shadow: 0 1px 4px rgba(11, 43, 102, 0.14);
+            }
+
+            .export-menu__trigger::-webkit-details-marker {
+                display: none;
+            }
+
+            .export-menu__trigger:hover,
+            .export-menu[open] .export-menu__trigger {
+                border-color: #b8c3d2;
+                color: #0b2b66;
+                background: #fff;
+            }
+
+            .export-menu__content {
+                position: absolute;
+                top: 44px;
+                right: 0;
+                min-width: 150px;
+                padding: 6px;
+                border: 1px solid #d7dde6;
+                border-radius: 8px;
+                background: #fff;
+                box-shadow: 0 10px 28px rgba(11, 43, 102, 0.16);
+            }
+
+            .export-menu__content a {
+                display: block;
+                padding: 8px 10px;
+                border-radius: 6px;
+                color: #0b2b66;
+                font-size: 0.92rem;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+
+            .export-menu__content a:hover {
+                background: #eef3f8;
             }
 
             .summary-box {
@@ -142,6 +213,7 @@ def _():
         """
     )
     return (
+        EXPORT_PATHS,
         FIG1_PERIOD_TEXT,
         FIG1_SUMMARY_LINES,
         FIG2_NOTE,
@@ -164,17 +236,21 @@ def _(mo):
 
 
 @app.cell
-def _(FIG1_PERIOD_TEXT, FIG1_SUMMARY_LINES, FIGURE_PATHS, figure_panel, mo, summary_box, two_figures):
+def _(EXPORT_PATHS, FIG1_PERIOD_TEXT, FIG1_SUMMARY_LINES, FIGURE_PATHS, figure_panel, mo, summary_box, two_figures):
     mo.Html(
         two_figures(
             figure_panel(
+                "fig1-abonnement",
                 "Basert på abonnement",
                 FIGURE_PATHS["fig1_abonnement"],
+                EXPORT_PATHS["fig1_abonnement"],
                 "Utvikling i markedsandeler basert på abonnement",
             ),
             figure_panel(
+                "fig1-omsetning",
                 "Basert på omsetning",
                 FIGURE_PATHS["fig1_omsetning"],
+                EXPORT_PATHS["fig1_omsetning"],
                 "Utvikling i markedsandeler basert på omsetning",
             ),
         )
@@ -198,17 +274,21 @@ def _(mo):
 
 
 @app.cell
-def _(FIG2_NOTE, FIGURE_PATHS, figure_panel, mo, two_figures):
+def _(EXPORT_PATHS, FIG2_NOTE, FIGURE_PATHS, figure_panel, mo, two_figures):
     mo.Html(
         two_figures(
             figure_panel(
+                "fig2-abonnement",
                 "Abonnement",
                 FIGURE_PATHS["fig2_abonnement"],
+                EXPORT_PATHS["fig2_abonnement"],
                 "Lineær trend i markedsandeler basert på abonnement",
             ),
             figure_panel(
+                "fig2-omsetning",
                 "Omsetning",
                 FIGURE_PATHS["fig2_omsetning"],
+                EXPORT_PATHS["fig2_omsetning"],
                 "Lineær trend i markedsandeler basert på omsetning",
             ),
         )
@@ -232,17 +312,21 @@ def _(mo):
 
 
 @app.cell
-def _(FIG3_PERIOD_TEXT, FIG3_SUMMARY_LINES, FIGURE_PATHS, figure_panel, mo, summary_box, two_figures):
+def _(EXPORT_PATHS, FIG3_PERIOD_TEXT, FIG3_SUMMARY_LINES, FIGURE_PATHS, figure_panel, mo, summary_box, two_figures):
     mo.Html(
         two_figures(
             figure_panel(
+                "fig3-privat",
                 "Privat",
                 FIGURE_PATHS["fig3_privat"],
+                EXPORT_PATHS["fig3_privat"],
                 "Abonnement fordelt på tilbydere i privatmarkedet",
             ),
             figure_panel(
+                "fig3-bedrift",
                 "Bedrift",
                 FIGURE_PATHS["fig3_bedrift"],
+                EXPORT_PATHS["fig3_bedrift"],
                 "Abonnement fordelt på tilbydere i bedriftsmarkedet",
             ),
         )

@@ -31,8 +31,8 @@ Dette prosjektet er foreløpig kun satt opp for lokal kjøring. Publisering, sna
 
 Den ferdige appen bygges som ren statisk HTML og kan hostes på en static web
 app. Byggsteget leser `data/mobil.parquet`, beregner alle dataserier, renderer
-figurene som PNG og legger ferdig innhold inn i HTML-en. Brukeren trenger ikke
-Python eller marimo lokalt.
+figurene som PNG, lager ferdige Excel-filer og legger ferdig innhold inn i
+HTML-en. Brukeren trenger ikke Python eller marimo lokalt.
 
 ```bash
 ./scripts/build-static.sh
@@ -44,8 +44,11 @@ Dette lager:
 dist/
 ├── index.html
 ├── assets/
-│   └── figures/
-│       ├── figur-1-abonnement.png
+│   ├── figures/
+│   │   ├── figur-1-abonnement.png
+│   │   └── ...
+│   └── exports/
+│       ├── figur-1-abonnement.xlsx
 │       └── ...
 ```
 

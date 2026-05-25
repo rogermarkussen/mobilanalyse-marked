@@ -8,11 +8,15 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import polars as pl
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "mobil.parquet"
 FIGURE_DIR = ROOT / "dist" / "assets" / "figures"
+EXPORT_DIR = ROOT / "dist" / "assets" / "exports"
 GENERATED = ROOT / "mobilanalyse_generated.py"
 
 ORDER = ["Telenor", "Telia", "Lyse Tele (Ice)", "Øvrige"]
@@ -354,6 +358,190 @@ def threshold_text(data: pl.DataFrame, provider: str, threshold: float) -> str:
     return f"{provider} når {threshold:.0f} % av omsetningen rundt {int(projected_year + 0.999)}."
 
 
+def export_matrix(data: pl.DataFrame) -> tuple[list[str], list[list[str | float | None]]]:
+    years = sorted(int(year) for year in data["ar"].unique().to_list())
+    pivoted = (
+        data.with_columns(
+            (pl.col("markedsandel") / 100).alias("markedsandel"),
+            pl.col("ar").cast(pl.Utf8),
+        )
+        .pivot(
+            values="markedsandel",
+            index="tilbyder",
+            on="ar",
+            aggregate_function="first",
+        )
+        .select(["tilbyder"] + [str(year) for year in years])
+        .sort("tilbyder")
+    )
+    return pivoted.columns, [list(row) for row in pivoted.iter_rows()]
+
+
+def trend_export_matrix(
+    actual: pl.DataFrame,
+    projection: pl.DataFrame,
+) -> tuple[list[str], list[int], list[int], list[list[str | float | None]]]:
+    history_years = sorted(int(year) for year in actual["ar"].unique().to_list())
+    last_history_year = max(history_years)
+    trend_years = sorted(
+        int(year)
+        for year in projection.filter(pl.col("ar") > last_history_year)["ar"].unique().to_list()
+    )
+
+    history = actual.with_columns(
+        (pl.col("markedsandel") / 100).alias("markedsandel"),
+        pl.col("ar").cast(pl.Utf8),
+    )
+    trend = projection.filter(pl.col("ar") > last_history_year).with_columns(
+        (pl.col("markedsandel") / 100).alias("markedsandel"),
+        pl.col("ar").cast(pl.Utf8),
+    )
+
+    combined = pl.concat([history, trend], how="diagonal")
+    columns = ["tilbyder"] + [str(year) for year in history_years + trend_years]
+    pivoted = (
+        combined.pivot(
+            values="markedsandel",
+            index="tilbyder",
+            on="ar",
+            aggregate_function="first",
+        )
+        .select(columns)
+        .sort("tilbyder")
+    )
+    return columns, history_years, trend_years, [list(row) for row in pivoted.iter_rows()]
+
+
+def style_workbook(
+    wb: Workbook,
+    title: str,
+    columns: list[str],
+    rows: list[list[str | float | None]],
+    *,
+    history_years: list[int] | None = None,
+    trend_years: list[int] | None = None,
+) -> None:
+    ws = wb.active
+    ws.title = "Markedsandeler"
+
+    dark_blue = "0B2B66"
+    history_fill = "E9F2DF"
+    trend_fill = "DDEBF7"
+    zebra_fill = "EEF3F8"
+    border_gray = "D9D9D9"
+    thin = Side(style="thin", color=border_gray)
+    medium_blue = Side(style="medium", color=dark_blue)
+
+    ws["A1"] = title
+    ws["A1"].font = Font(bold=True, size=14, color=dark_blue)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(columns))
+
+    header_row = 4 if history_years is not None and trend_years is not None else 3
+    first_data_row = header_row + 1
+
+    if history_years is not None and trend_years is not None:
+        history_start = 2
+        history_end = history_start + len(history_years) - 1
+        trend_start = history_end + 1
+        trend_end = trend_start + len(trend_years) - 1
+
+        ws.merge_cells(start_row=3, start_column=history_start, end_row=3, end_column=history_end)
+        ws.cell(row=3, column=history_start).value = "Historikk"
+        ws.cell(row=3, column=history_start).fill = PatternFill("solid", fgColor=history_fill)
+        ws.cell(row=3, column=history_start).font = Font(bold=True, color="000000")
+        ws.cell(row=3, column=history_start).alignment = Alignment(horizontal="center")
+
+        if trend_years:
+            ws.merge_cells(start_row=3, start_column=trend_start, end_row=3, end_column=trend_end)
+            ws.cell(row=3, column=trend_start).value = "Lineær trend"
+            ws.cell(row=3, column=trend_start).fill = PatternFill("solid", fgColor=trend_fill)
+            ws.cell(row=3, column=trend_start).font = Font(bold=True, color="000000")
+            ws.cell(row=3, column=trend_start).alignment = Alignment(horizontal="center")
+
+        for column_index in range(history_start, history_end + 1):
+            ws.cell(row=3, column=column_index).fill = PatternFill("solid", fgColor=history_fill)
+            ws.cell(row=3, column=column_index).border = Border(top=medium_blue, bottom=thin)
+        for column_index in range(trend_start, trend_end + 1):
+            ws.cell(row=3, column=column_index).fill = PatternFill("solid", fgColor=trend_fill)
+            ws.cell(row=3, column=column_index).border = Border(top=medium_blue, bottom=thin)
+
+    for column_index, column in enumerate(columns, start=1):
+        cell = ws.cell(row=header_row, column=column_index, value=column)
+        cell.fill = PatternFill("solid", fgColor=dark_blue)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = Border(bottom=thin)
+
+    for row_values in rows:
+        ws.append(row_values)
+
+    for row_index in range(first_data_row, ws.max_row + 1):
+        if (row_index - first_data_row) % 2 == 0:
+            for cell in ws[row_index]:
+                cell.fill = PatternFill("solid", fgColor=zebra_fill)
+        for column_index in range(1, ws.max_column + 1):
+            cell = ws.cell(row=row_index, column=column_index)
+            cell.border = Border(bottom=thin)
+            if column_index == 1:
+                cell.alignment = Alignment(horizontal="left")
+            else:
+                cell.number_format = "0.0%"
+                cell.alignment = Alignment(horizontal="right")
+
+            if history_years is not None and trend_years is not None:
+                if 2 <= column_index <= history_end:
+                    cell.fill = PatternFill("solid", fgColor=history_fill)
+                if trend_years and trend_start <= column_index <= trend_end:
+                    cell.fill = PatternFill("solid", fgColor=trend_fill)
+                if trend_years and column_index == trend_start:
+                    cell.border = Border(
+                        left=medium_blue,
+                        bottom=thin,
+                    )
+
+    if history_years is not None and trend_years:
+        for row_index in range(3, ws.max_row + 1):
+            cell = ws.cell(row=row_index, column=trend_start)
+            existing = cell.border
+            cell.border = Border(
+                left=medium_blue,
+                right=existing.right,
+                top=existing.top,
+                bottom=existing.bottom,
+            )
+
+    ws.freeze_panes = f"A{first_data_row}"
+    ws.auto_filter.ref = f"A{header_row}:{get_column_letter(ws.max_column)}{ws.max_row}"
+
+    for column_index, column in enumerate(columns, start=1):
+        values = [column]
+        for row_index in range(first_data_row, ws.max_row + 1):
+            values.append(str(ws.cell(row=row_index, column=column_index).value or ""))
+        width = max(len(str(value)) for value in values) + 2
+        ws.column_dimensions[get_column_letter(column_index)].width = min(max(width, 12), 28)
+
+
+def write_share_excel(data: pl.DataFrame, path: Path, title: str) -> None:
+    columns, rows = export_matrix(data)
+    wb = Workbook()
+    style_workbook(wb, title, columns, rows)
+    wb.save(path)
+
+
+def write_trend_excel(actual: pl.DataFrame, projection: pl.DataFrame, path: Path, title: str) -> None:
+    columns, history_years, trend_years, rows = trend_export_matrix(actual, projection)
+    wb = Workbook()
+    style_workbook(
+        wb,
+        title,
+        columns,
+        rows,
+        history_years=history_years,
+        trend_years=trend_years,
+    )
+    wb.save(path)
+
+
 def write_generated(ab: pl.DataFrame, om: pl.DataFrame, seg: pl.DataFrame) -> None:
     figure_paths = {
         "fig1_abonnement": "assets/figures/figur-1-abonnement.png",
@@ -363,9 +551,18 @@ def write_generated(ab: pl.DataFrame, om: pl.DataFrame, seg: pl.DataFrame) -> No
         "fig3_privat": "assets/figures/figur-3-privat.png",
         "fig3_bedrift": "assets/figures/figur-3-bedrift.png",
     }
+    export_paths = {
+        "fig1_abonnement": "assets/exports/figur-1-abonnement.xlsx",
+        "fig1_omsetning": "assets/exports/figur-1-omsetning.xlsx",
+        "fig2_abonnement": "assets/exports/figur-2-abonnement-trend.xlsx",
+        "fig2_omsetning": "assets/exports/figur-2-omsetning-trend.xlsx",
+        "fig3_privat": "assets/exports/figur-3-privat.xlsx",
+        "fig3_bedrift": "assets/exports/figur-3-bedrift.xlsx",
+    }
     content = f'''# This file is generated by scripts/preprocess_assets.py.
 
 FIGURE_PATHS = {figure_paths!r}
+EXPORT_PATHS = {export_paths!r}
 
 FIG1_PERIOD_TEXT = {period_text(ab, om)!r}
 FIG1_SUMMARY_LINES = {[pair_text(ab, om, provider) for provider in SUMMARY_ORDER]!r}
@@ -380,6 +577,7 @@ FIG3_SUMMARY_LINES = {[segment_text(seg, provider) for provider in SUMMARY_ORDER
 
 def main() -> None:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     df = pl.scan_parquet(DATA)
 
     ab = market_share_abonnement(df)
@@ -394,6 +592,39 @@ def main() -> None:
     plot_projection(om, om_projection, FIGURE_DIR / "figur-2-omsetning-trend.png")
     plot_share(seg.filter(pl.col("ms") == "Privat"), 50, FIGURE_DIR / "figur-3-privat.png")
     plot_share(seg.filter(pl.col("ms") == "Bedrift"), 60, FIGURE_DIR / "figur-3-bedrift.png")
+
+    write_share_excel(
+        ab,
+        EXPORT_DIR / "figur-1-abonnement.xlsx",
+        "Figur 1 - Markedsandeler basert på abonnement",
+    )
+    write_share_excel(
+        om,
+        EXPORT_DIR / "figur-1-omsetning.xlsx",
+        "Figur 1 - Markedsandeler basert på omsetning",
+    )
+    write_trend_excel(
+        ab,
+        ab_projection,
+        EXPORT_DIR / "figur-2-abonnement-trend.xlsx",
+        "Figur 2 - Lineær trend basert på abonnement",
+    )
+    write_trend_excel(
+        om,
+        om_projection,
+        EXPORT_DIR / "figur-2-omsetning-trend.xlsx",
+        "Figur 2 - Lineær trend basert på omsetning",
+    )
+    write_share_excel(
+        seg.filter(pl.col("ms") == "Privat"),
+        EXPORT_DIR / "figur-3-privat.xlsx",
+        "Figur 3 - Abonnement i privatmarkedet",
+    )
+    write_share_excel(
+        seg.filter(pl.col("ms") == "Bedrift"),
+        EXPORT_DIR / "figur-3-bedrift.xlsx",
+        "Figur 3 - Abonnement i bedriftsmarkedet",
+    )
 
     write_generated(ab, om, seg)
 
