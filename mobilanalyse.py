@@ -62,27 +62,68 @@ async def _(Path, pl, pyfetch):
 @app.cell
 def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
     def excel_download(_data, _filename, _title, _sheet_name="Data"):
-        _index_columns = [
-            _column
-            for _column in ["serie", "ms", "tilbyder"]
-            if _column in _data.columns
-        ]
-        _years = sorted(_data["ar"].unique().to_list())
-        _export_data = (
-            _data.with_columns(
-                (pl.col("markedsandel") / 100).alias("markedsandel"),
-                pl.col("ar").cast(pl.Utf8),
+        _is_trend_export = "serie" in _data.columns
+        if _is_trend_export:
+            _index_columns = [
+                _column for _column in ["ms", "tilbyder"] if _column in _data.columns
+            ]
+            _history_years = sorted(
+                _data.filter(pl.col("serie") == "Historikk")["ar"].unique().to_list()
             )
-            .pivot(
-                values="markedsandel",
-                index=_index_columns,
-                on="ar",
-                aggregate_function="first",
+            _last_history_year = max(_history_years)
+            _trend_years = sorted(
+                _data.filter(
+                    (pl.col("serie") == "Lineær trend")
+                    & (pl.col("ar") > _last_history_year)
+                )["ar"].unique().to_list()
             )
-            .select(_index_columns + [str(_year) for _year in _years])
-            .sort(_index_columns)
-        )
+            _export_data = (
+                _data.filter(
+                    (pl.col("serie") == "Historikk")
+                    | (
+                        (pl.col("serie") == "Lineær trend")
+                        & (pl.col("ar") > _last_history_year)
+                    )
+                )
+                .with_columns(
+                    (pl.col("markedsandel") / 100).alias("markedsandel"),
+                    pl.col("ar").cast(pl.Utf8),
+                )
+                .pivot(
+                    values="markedsandel",
+                    index=_index_columns,
+                    on="ar",
+                    aggregate_function="first",
+                )
+                .select(
+                    _index_columns
+                    + [str(_year) for _year in _history_years + _trend_years]
+                )
+                .sort(_index_columns)
+            )
+            _years = _history_years + _trend_years
+        else:
+            _index_columns = [
+                _column for _column in ["ms", "tilbyder"] if _column in _data.columns
+            ]
+            _years = sorted(_data["ar"].unique().to_list())
+            _export_data = (
+                _data.with_columns(
+                    (pl.col("markedsandel") / 100).alias("markedsandel"),
+                    pl.col("ar").cast(pl.Utf8),
+                )
+                .pivot(
+                    values="markedsandel",
+                    index=_index_columns,
+                    on="ar",
+                    aggregate_function="first",
+                )
+                .select(_index_columns + [str(_year) for _year in _years])
+                .sort(_index_columns)
+            )
         _headers = _export_data.columns
+        _header_row = 4 if _is_trend_export else 3
+        _first_data_row = _header_row + 1
         _workbook = Workbook()
         _sheet = _workbook.active
         _sheet.title = _sheet_name[:31]
@@ -97,6 +138,28 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
         )
 
         _sheet.append([])
+        if _is_trend_export:
+            _sheet.append([""] * len(_headers))
+            _history_start = len(_index_columns) + 1
+            _history_end = _history_start + len(_history_years) - 1
+            _trend_start = _history_end + 1
+            _trend_end = _trend_start + len(_trend_years) - 1
+            if _history_years:
+                _sheet.merge_cells(
+                    start_row=3,
+                    start_column=_history_start,
+                    end_row=3,
+                    end_column=_history_end,
+                )
+                _sheet.cell(row=3, column=_history_start).value = "Historikk"
+            if _trend_years:
+                _sheet.merge_cells(
+                    start_row=3,
+                    start_column=_trend_start,
+                    end_row=3,
+                    end_column=_trend_end,
+                )
+                _sheet.cell(row=3, column=_trend_start).value = "Lineær trend"
         _sheet.append(_headers)
         for _row in _export_data.iter_rows():
             _sheet.append(list(_row))
@@ -106,13 +169,19 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
         _thin = Side(style="thin", color="D9D9D9")
         _border = Border(bottom=_thin)
 
-        for _cell in _sheet[3]:
+        if _is_trend_export:
+            for _cell in _sheet[3]:
+                _cell.fill = PatternFill("solid", fgColor="E9F2DF")
+                _cell.font = Font(bold=True, color="000000")
+                _cell.alignment = Alignment(horizontal="center")
+
+        for _cell in _sheet[_header_row]:
             _cell.fill = _header_fill
             _cell.font = _header_font
             _cell.alignment = Alignment(horizontal="center")
 
         for _row in _sheet.iter_rows(
-            min_row=4,
+            min_row=_first_data_row,
             max_row=_sheet.max_row,
             max_col=_sheet.max_column,
         ):
@@ -123,24 +192,24 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
                 if _headers[_cell.column - 1] in [str(_year) for _year in _years]:
                     _cell.number_format = "0.0%"
 
-        _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
-        for _row_index in range(4, _sheet.max_row + 1):
-            if _row_index % 2 == 0:
+        _table_ref = f"A{_header_row}:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
+        for _row_index in range(_first_data_row, _sheet.max_row + 1):
+            if (_row_index - _first_data_row) % 2 == 0:
                 for _cell in _sheet[_row_index]:
                     _cell.fill = PatternFill("solid", fgColor="EEF3F8")
-        _sheet.freeze_panes = "A4"
+        _sheet.freeze_panes = f"A{_first_data_row}"
         _sheet.auto_filter.ref = _table_ref
 
         for _column_index, _header in enumerate(_headers, start=1):
             _max_length = len(str(_header))
-            for _row_index in range(4, _sheet.max_row + 1):
+            for _row_index in range(_first_data_row, _sheet.max_row + 1):
                 _value = _sheet.cell(row=_row_index, column=_column_index).value
                 _max_length = max(
                     _max_length,
                     len(str(_value)) if _value is not None else 0,
-                )
+            )
             _sheet.column_dimensions[
-                _sheet.cell(row=3, column=_column_index).column_letter
+                _sheet.cell(row=_header_row, column=_column_index).column_letter
             ].width = min(
                 max(_max_length + 2, 12),
                 28,
