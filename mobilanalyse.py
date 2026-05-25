@@ -279,22 +279,22 @@ def _(mo):
 
             button[download], a[download], body button {
                 align-items: center !important;
-                background: #107c41 !important;
-                border: 1px solid #0b5f31 !important;
-                border-radius: 6px !important;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16) !important;
-                color: #ffffff !important;
+                background: #ffffff !important;
+                border: 1px solid #d6dde8 !important;
+                border-radius: 5px !important;
+                box-shadow: none !important;
+                color: #314155 !important;
                 cursor: pointer !important;
                 display: inline-flex !important;
-                height: 30px !important;
+                height: 24px !important;
                 justify-content: center !important;
                 margin: 0 !important;
                 min-width: 0 !important;
-                max-width: 32px !important;
+                max-width: 26px !important;
                 padding: 0 !important;
                 font-size: 0 !important;
                 line-height: 1.2 !important;
-                width: 32px !important;
+                width: 26px !important;
             }
 
             button[download] span, a[download] span, body button span {
@@ -302,15 +302,16 @@ def _(mo):
             }
 
             button[download]:hover, a[download]:hover, body button:hover {
-                background: #0b6f3a !important;
-                border-color: #064f27 !important;
+                background: #f5f8fb !important;
+                border-color: #9fb0c4 !important;
+                color: #0b2b66 !important;
             }
 
             button[download] svg, a[download] svg, body button svg {
-                color: #ffffff !important;
-                height: 16px !important;
+                color: currentColor !important;
+                height: 13px !important;
                 stroke: currentColor !important;
-                width: 16px !important;
+                width: 13px !important;
             }
         </style>
         <div style="margin-bottom: 20px;">
