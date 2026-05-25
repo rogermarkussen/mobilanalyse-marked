@@ -149,11 +149,10 @@ def _(mo):
         <style>
             .excel-heading-row {
                 align-items: center;
-                display: flex;
-                justify-content: flex-start;
+                display: inline-flex;
                 gap: 12px;
                 margin-bottom: 8px;
-                width: 100%;
+                width: auto;
             }
 
             .excel-heading-row .excel-title {
