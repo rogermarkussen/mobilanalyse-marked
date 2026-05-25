@@ -3,6 +3,7 @@
 # dependencies = [
 #   "marimo>=0.23.3",
 #   "matplotlib>=3.8.0",
+#   "openpyxl>=3.1.0",
 #   "pyarrow>=16.0.0",
 #   "polars>=1.0.0",
 # ]
@@ -16,17 +17,36 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
+    from io import BytesIO
     from pathlib import Path
 
     import matplotlib.pyplot as plt
     import marimo as mo
     import polars as pl
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.worksheet.table import Table, TableStyleInfo
 
     try:
         from pyodide.http import pyfetch
     except ImportError:
         pyfetch = None
-    return Path, mo, pl, plt, pyfetch
+    return (
+        Alignment,
+        Border,
+        BytesIO,
+        Font,
+        Path,
+        PatternFill,
+        Side,
+        Table,
+        TableStyleInfo,
+        Workbook,
+        mo,
+        pl,
+        plt,
+        pyfetch,
+    )
 
 
 @app.cell
@@ -40,6 +60,103 @@ async def _(Path, pl, pyfetch):
 
     df = pl.scan_parquet(parquet_path)
     return (df,)
+
+
+@app.cell
+def _(
+    Alignment,
+    Border,
+    BytesIO,
+    Font,
+    PatternFill,
+    Side,
+    Table,
+    TableStyleInfo,
+    Workbook,
+    mo,
+    pl,
+):
+    def excel_download(_data, _filename, _title, _sheet_name="Data"):
+        def _build_workbook():
+            _export_data = _data.with_columns(
+                (pl.col("markedsandel") / 100).alias("markedsandel")
+            )
+            _headers = _export_data.columns
+            _workbook = Workbook()
+            _sheet = _workbook.active
+            _sheet.title = _sheet_name[:31]
+
+            _sheet["A1"] = _title
+            _sheet["A1"].font = Font(bold=True, size=14, color="0B2B66")
+            _sheet.merge_cells(
+                start_row=1,
+                start_column=1,
+                end_row=1,
+                end_column=max(1, len(_headers)),
+            )
+
+            _sheet.append([])
+            _sheet.append(_headers)
+            for _row in _export_data.iter_rows():
+                _sheet.append(list(_row))
+
+            _header_fill = PatternFill("solid", fgColor="0B2B66")
+            _header_font = Font(bold=True, color="FFFFFF")
+            _thin = Side(style="thin", color="D9D9D9")
+            _border = Border(bottom=_thin)
+
+            for _cell in _sheet[3]:
+                _cell.fill = _header_fill
+                _cell.font = _header_font
+                _cell.alignment = Alignment(horizontal="center")
+
+            for _row in _sheet.iter_rows(
+                min_row=4,
+                max_row=_sheet.max_row,
+                max_col=_sheet.max_column,
+            ):
+                for _cell in _row:
+                    _cell.border = _border
+                    if _cell.column_letter == "A":
+                        _cell.alignment = Alignment(horizontal="center")
+                    if _headers[_cell.column - 1] == "markedsandel":
+                        _cell.number_format = "0.0%"
+
+            _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
+            _table = Table(displayName="Markedsandeler", ref=_table_ref)
+            _table.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2",
+                showFirstColumn=False,
+                showLastColumn=False,
+                showRowStripes=True,
+                showColumnStripes=False,
+            )
+            _sheet.add_table(_table)
+            _sheet.freeze_panes = "A4"
+            _sheet.auto_filter.ref = _table_ref
+
+            for _column in _sheet.columns:
+                _max_length = max(
+                    len(str(_cell.value)) if _cell.value is not None else 0
+                    for _cell in _column
+                )
+                _sheet.column_dimensions[_column[0].column_letter].width = min(
+                    max(_max_length + 2, 12),
+                    28,
+                )
+
+            _buffer = BytesIO()
+            _workbook.save(_buffer)
+            return _buffer.getvalue()
+
+        return mo.download(
+            data=_build_workbook,
+            filename=_filename,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            label="Excel-eksport",
+        )
+
+    return (excel_download,)
 
 
 @app.cell
@@ -147,7 +264,14 @@ def _(df, pl):
 
 
 @app.cell
-def _(market_share_abonnement, market_share_omsetning, mo, pl, plt):
+def _(
+    excel_download,
+    market_share_abonnement,
+    market_share_omsetning,
+    mo,
+    pl,
+    plt,
+):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -267,6 +391,18 @@ def _(market_share_abonnement, market_share_omsetning, mo, pl, plt):
 
     _abonnement_fig = _plot_market_share(market_share_abonnement, 60)
     _omsetning_fig = _plot_market_share(market_share_omsetning, 60)
+    _abonnement_export = excel_download(
+        market_share_abonnement,
+        "figur-1-abonnement.xlsx",
+        "Figur 1 - Markedsandeler basert på abonnement",
+        "Abonnement",
+    )
+    _omsetning_export = excel_download(
+        market_share_omsetning,
+        "figur-1-omsetning.xlsx",
+        "Figur 1 - Markedsandeler basert på omsetning",
+        "Omsetning",
+    )
 
     _summary = mo.Html(
         f"""
@@ -300,6 +436,7 @@ def _(market_share_abonnement, market_share_omsetning, mo, pl, plt):
                             mo.Html(
                                 '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på abonnement</div>'
                             ),
+                            _abonnement_export,
                             _abonnement_fig,
                         ],
                         gap=0.5,
@@ -309,6 +446,7 @@ def _(market_share_abonnement, market_share_omsetning, mo, pl, plt):
                             mo.Html(
                                 '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på omsetning</div>'
                             ),
+                            _omsetning_export,
                             _omsetning_fig,
                         ],
                         gap=0.5,
@@ -390,6 +528,7 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 
 @app.cell
 def _(
+    excel_download,
     market_share_abonnement,
     market_share_abonnement_projection,
     market_share_omsetning,
@@ -505,6 +644,15 @@ def _(
         _year = (_threshold - (_y_mean - _slope * _x_mean)) / _slope
         return f"Lyse Tele (Ice) når {_threshold:.0f} % av omsetningen rundt {int(_year + 0.999)}."
 
+    def _projection_export_data(_actual, _projection):
+        _actual_export = _actual.with_columns(pl.lit("Historikk").alias("serie"))
+        _projection_export = _projection.with_columns(pl.lit("Lineær trend").alias("serie"))
+        return (
+            pl.concat([_actual_export, _projection_export])
+            .select("serie", "ar", "tilbyder", "markedsandel")
+            .sort("serie", "ar", "tilbyder")
+        )
+
     _abonnement_projection_fig = _plot_projection(
         market_share_abonnement,
         market_share_abonnement_projection,
@@ -516,6 +664,18 @@ def _(
         market_share_omsetning_projection,
         "Omsetning",
         60,
+    )
+    _abonnement_projection_export = excel_download(
+        _projection_export_data(market_share_abonnement, market_share_abonnement_projection),
+        "figur-2-abonnement-trend.xlsx",
+        "Figur 2 - Lineær trend basert på abonnement",
+        "Abonnement trend",
+    )
+    _omsetning_projection_export = excel_download(
+        _projection_export_data(market_share_omsetning, market_share_omsetning_projection),
+        "figur-2-omsetning-trend.xlsx",
+        "Figur 2 - Lineær trend basert på omsetning",
+        "Omsetning trend",
     )
     _forecast_note = mo.Html(
         f"""
@@ -541,7 +701,10 @@ def _(
     mo.vstack(
         [
             mo.hstack(
-                [_abonnement_projection_fig, _omsetning_projection_fig],
+                [
+                    mo.vstack([_abonnement_projection_export, _abonnement_projection_fig], gap=0.5),
+                    mo.vstack([_omsetning_projection_export, _omsetning_projection_fig], gap=0.5),
+                ],
                 justify="center",
                 gap=2,
             ),
@@ -618,7 +781,7 @@ def _(df, pl):
 
 
 @app.cell
-def _(market_share_abonnement_segment, mo, pl, plt):
+def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -737,6 +900,18 @@ def _(market_share_abonnement_segment, mo, pl, plt):
     )
     _private_fig = _plot_segment("Privat", 50)
     _business_fig = _plot_segment("Bedrift")
+    _private_export = excel_download(
+        market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
+        "figur-3-privat.xlsx",
+        "Figur 3 - Abonnement i privatmarkedet",
+        "Privat",
+    )
+    _business_export = excel_download(
+        market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
+        "figur-3-bedrift.xlsx",
+        "Figur 3 - Abonnement i bedriftsmarkedet",
+        "Bedrift",
+    )
     _summary = mo.Html(
         f"""
         <div style="
@@ -769,6 +944,7 @@ def _(market_share_abonnement_segment, mo, pl, plt):
                             mo.Html(
                                 '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Privat</div>'
                             ),
+                            _private_export,
                             _private_fig,
                         ],
                         gap=0.5,
@@ -778,6 +954,7 @@ def _(market_share_abonnement_segment, mo, pl, plt):
                             mo.Html(
                                 '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Bedrift</div>'
                             ),
+                            _business_export,
                             _business_fig,
                         ],
                         gap=0.5,
