@@ -77,80 +77,78 @@ def _(
     pl,
 ):
     def excel_download(_data, _filename, _title, _sheet_name="Data"):
-        def _build_workbook():
-            _export_data = _data.with_columns(
-                (pl.col("markedsandel") / 100).alias("markedsandel")
+        _export_data = _data.with_columns(
+            (pl.col("markedsandel") / 100).alias("markedsandel")
+        )
+        _headers = _export_data.columns
+        _workbook = Workbook()
+        _sheet = _workbook.active
+        _sheet.title = _sheet_name[:31]
+
+        _sheet["A1"] = _title
+        _sheet["A1"].font = Font(bold=True, size=14, color="0B2B66")
+        _sheet.merge_cells(
+            start_row=1,
+            start_column=1,
+            end_row=1,
+            end_column=max(1, len(_headers)),
+        )
+
+        _sheet.append([])
+        _sheet.append(_headers)
+        for _row in _export_data.iter_rows():
+            _sheet.append(list(_row))
+
+        _header_fill = PatternFill("solid", fgColor="0B2B66")
+        _header_font = Font(bold=True, color="FFFFFF")
+        _thin = Side(style="thin", color="D9D9D9")
+        _border = Border(bottom=_thin)
+
+        for _cell in _sheet[3]:
+            _cell.fill = _header_fill
+            _cell.font = _header_font
+            _cell.alignment = Alignment(horizontal="center")
+
+        for _row in _sheet.iter_rows(
+            min_row=4,
+            max_row=_sheet.max_row,
+            max_col=_sheet.max_column,
+        ):
+            for _cell in _row:
+                _cell.border = _border
+                if _cell.column_letter == "A":
+                    _cell.alignment = Alignment(horizontal="center")
+                if _headers[_cell.column - 1] == "markedsandel":
+                    _cell.number_format = "0.0%"
+
+        _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
+        _table = Table(displayName="Markedsandeler", ref=_table_ref)
+        _table.tableStyleInfo = TableStyleInfo(
+            name="TableStyleMedium2",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=False,
+        )
+        _sheet.add_table(_table)
+        _sheet.freeze_panes = "A4"
+        _sheet.auto_filter.ref = _table_ref
+
+        for _column in _sheet.columns:
+            _max_length = max(
+                len(str(_cell.value)) if _cell.value is not None else 0
+                for _cell in _column
             )
-            _headers = _export_data.columns
-            _workbook = Workbook()
-            _sheet = _workbook.active
-            _sheet.title = _sheet_name[:31]
-
-            _sheet["A1"] = _title
-            _sheet["A1"].font = Font(bold=True, size=14, color="0B2B66")
-            _sheet.merge_cells(
-                start_row=1,
-                start_column=1,
-                end_row=1,
-                end_column=max(1, len(_headers)),
+            _sheet.column_dimensions[_column[0].column_letter].width = min(
+                max(_max_length + 2, 12),
+                28,
             )
 
-            _sheet.append([])
-            _sheet.append(_headers)
-            for _row in _export_data.iter_rows():
-                _sheet.append(list(_row))
-
-            _header_fill = PatternFill("solid", fgColor="0B2B66")
-            _header_font = Font(bold=True, color="FFFFFF")
-            _thin = Side(style="thin", color="D9D9D9")
-            _border = Border(bottom=_thin)
-
-            for _cell in _sheet[3]:
-                _cell.fill = _header_fill
-                _cell.font = _header_font
-                _cell.alignment = Alignment(horizontal="center")
-
-            for _row in _sheet.iter_rows(
-                min_row=4,
-                max_row=_sheet.max_row,
-                max_col=_sheet.max_column,
-            ):
-                for _cell in _row:
-                    _cell.border = _border
-                    if _cell.column_letter == "A":
-                        _cell.alignment = Alignment(horizontal="center")
-                    if _headers[_cell.column - 1] == "markedsandel":
-                        _cell.number_format = "0.0%"
-
-            _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
-            _table = Table(displayName="Markedsandeler", ref=_table_ref)
-            _table.tableStyleInfo = TableStyleInfo(
-                name="TableStyleMedium2",
-                showFirstColumn=False,
-                showLastColumn=False,
-                showRowStripes=True,
-                showColumnStripes=False,
-            )
-            _sheet.add_table(_table)
-            _sheet.freeze_panes = "A4"
-            _sheet.auto_filter.ref = _table_ref
-
-            for _column in _sheet.columns:
-                _max_length = max(
-                    len(str(_cell.value)) if _cell.value is not None else 0
-                    for _cell in _column
-                )
-                _sheet.column_dimensions[_column[0].column_letter].width = min(
-                    max(_max_length + 2, 12),
-                    28,
-                )
-
-            _buffer = BytesIO()
-            _workbook.save(_buffer)
-            return _buffer.getvalue()
+        _buffer = BytesIO()
+        _workbook.save(_buffer)
 
         return mo.download(
-            data=_build_workbook,
+            data=_buffer.getvalue(),
             filename=_filename,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             label="Excel-eksport",
@@ -163,6 +161,30 @@ def _(
 def _(mo):
     mo.Html(
         """
+        <style>
+            .excel-heading-row {
+                align-items: center;
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 8px;
+                width: 100%;
+            }
+
+            .excel-heading-row .excel-title {
+                font-size: 1.25rem;
+                font-weight: 700;
+            }
+
+            body button {
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: fit-content !important;
+                padding: 4px 10px !important;
+                font-size: 0.82rem !important;
+                line-height: 1.2 !important;
+            }
+        </style>
         <div style="margin-bottom: 20px;">
             <div style="font-size: 2.2rem; font-weight: 700; color: #0b2b66;">
                 Mobilanalyse marked
@@ -433,20 +455,30 @@ def _(
                 [
                     mo.vstack(
                         [
-                            mo.Html(
-                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på abonnement</div>'
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Basert på abonnement</div></div>'
+                                    ),
+                                    _abonnement_export,
+                                ],
+                                justify="space-between",
                             ),
-                            _abonnement_export,
                             _abonnement_fig,
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
-                            mo.Html(
-                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på omsetning</div>'
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Basert på omsetning</div></div>'
+                                    ),
+                                    _omsetning_export,
+                                ],
+                                justify="space-between",
                             ),
-                            _omsetning_export,
                             _omsetning_fig,
                         ],
                         gap=0.5,
@@ -702,8 +734,36 @@ def _(
         [
             mo.hstack(
                 [
-                    mo.vstack([_abonnement_projection_export, _abonnement_projection_fig], gap=0.5),
-                    mo.vstack([_omsetning_projection_export, _omsetning_projection_fig], gap=0.5),
+                    mo.vstack(
+                        [
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Abonnement</div></div>'
+                                    ),
+                                    _abonnement_projection_export,
+                                ],
+                                justify="space-between",
+                            ),
+                            _abonnement_projection_fig,
+                        ],
+                        gap=0.5,
+                    ),
+                    mo.vstack(
+                        [
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Omsetning</div></div>'
+                                    ),
+                                    _omsetning_projection_export,
+                                ],
+                                justify="space-between",
+                            ),
+                            _omsetning_projection_fig,
+                        ],
+                        gap=0.5,
+                    ),
                 ],
                 justify="center",
                 gap=2,
@@ -941,20 +1001,30 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
                 [
                     mo.vstack(
                         [
-                            mo.Html(
-                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Privat</div>'
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Privat</div></div>'
+                                    ),
+                                    _private_export,
+                                ],
+                                justify="space-between",
                             ),
-                            _private_export,
                             _private_fig,
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
-                            mo.Html(
-                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Bedrift</div>'
+                            mo.hstack(
+                                [
+                                    mo.Html(
+                                        '<div class="excel-heading-row"><div class="excel-title">Bedrift</div></div>'
+                                    ),
+                                    _business_export,
+                                ],
+                                justify="space-between",
                             ),
-                            _business_export,
                             _business_fig,
                         ],
                         gap=0.5,
