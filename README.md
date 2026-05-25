@@ -29,8 +29,10 @@ Dette prosjektet er foreløpig kun satt opp for lokal kjøring. Publisering, sna
 
 ## Bygg statisk app
 
-Den ferdige appen bygges som HTML/WASM og kan hostes på en ren static web app.
-Koden vises ikke i appen, og brukeren trenger ikke Python eller marimo lokalt.
+Den ferdige appen bygges som ren statisk HTML og kan hostes på en static web
+app. Byggsteget leser `data/mobil.parquet`, beregner alle dataserier, renderer
+figurene som PNG og legger ferdig innhold inn i HTML-en. Brukeren trenger ikke
+Python eller marimo lokalt.
 
 ```bash
 ./scripts/build-static.sh
@@ -42,12 +44,13 @@ Dette lager:
 dist/
 ├── index.html
 ├── assets/
-└── data/
-    └── mobil.parquet
+│   └── figures/
+│       ├── figur-1-abonnement.png
+│       └── ...
 ```
 
-Publiser hele `dist/`-mappen. Appen må serveres over HTTP, ikke åpnes direkte
-som `file://`, fordi WebAssembly-appen henter `data/mobil.parquet` via browseren.
+Publiser hele `dist/`-mappen. Appen er ferdig preprosessert og henter ikke
+Parquet-data i browseren.
 
 ## Publisering på GitHub Pages
 
@@ -62,5 +65,5 @@ uv sync --frozen
 ```
 
 Deretter publiseres `dist/` som Pages-artifact. `data/mobil.parquet` er et lite
-statisk snapshot som inngår i repoet slik at appen kan bygges uten tilgang til
-lokal database.
+statisk snapshot som inngår i repoet slik at alle figurer kan preprosesseres i
+deploy-steget uten tilgang til lokal database.

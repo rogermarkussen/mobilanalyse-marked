@@ -5,12 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 rm -rf dist
-mkdir -p dist/data
+mkdir -p dist/assets/figures
 
-cp data/mobil.parquet dist/data/mobil.parquet
+uv run python scripts/preprocess_assets.py
 
-uv run marimo export html-wasm mobilanalyse.py \
-  --output dist \
-  --mode run \
-  --no-show-code \
+uv run marimo export html mobilanalyse.py \
+  --output dist/index.html \
+  --no-include-code \
   --force
