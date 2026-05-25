@@ -1,7 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "duckdb>=1.2.0",
 #   "marimo>=0.23.3",
 #   "matplotlib>=3.8.0",
 #   "pyarrow>=16.0.0",
@@ -19,18 +18,27 @@ app = marimo.App(width="full")
 def _():
     from pathlib import Path
 
-    import duckdb
     import matplotlib.pyplot as plt
     import marimo as mo
     import polars as pl
 
-    return Path, mo, pl, plt
+    try:
+        from pyodide.http import pyfetch
+    except ImportError:
+        pyfetch = None
+    return Path, mo, pl, plt, pyfetch
 
 
 @app.cell
-def _(Path, pl):
-    DATA_PATH = Path(__file__).parent / "data" / "mobil.parquet"
-    df = pl.scan_parquet(DATA_PATH)
+async def _(Path, pl, pyfetch):
+    if pyfetch is None:
+        parquet_path = Path(__file__).parent / "data" / "mobil.parquet"
+    else:
+        response = await pyfetch("../data/mobil.parquet")
+        parquet_path = Path("/tmp/mobil.parquet")
+        parquet_path.write_bytes(await response.bytes())
+
+    df = pl.scan_parquet(parquet_path)
     return (df,)
 
 
