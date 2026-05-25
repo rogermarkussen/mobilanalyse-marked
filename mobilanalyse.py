@@ -16,8 +16,6 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
-    from base64 import b64encode
-    from io import BytesIO
     from pathlib import Path
 
     import matplotlib.pyplot as plt
@@ -28,7 +26,7 @@ def _():
         from pyodide.http import pyfetch
     except ImportError:
         pyfetch = None
-    return BytesIO, Path, b64encode, mo, pl, plt, pyfetch
+    return Path, mo, pl, plt, pyfetch
 
 
 @app.cell
@@ -44,131 +42,10 @@ async def _(Path, pl, pyfetch):
     return (df,)
 
 
-@app.function
-def export_menu(_excel_filename, _png_filename):
-    return f"""
-        <details class="export-menu" ontoggle="if (this.open) setTimeout(() => {{
-            if (!window.__closeExportMenus) {{
-                window.__closeExportMenus = (event) => {{
-                    document.querySelectorAll('.export-menu[open]').forEach((menu) => {{
-                        if (!menu.contains(event.target)) menu.removeAttribute('open');
-                    }});
-                }};
-                document.addEventListener('click', window.__closeExportMenus);
-            }}
-        }}, 0);">
-            <summary aria-label="Eksporter figur" title="Eksporter figur">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 7h16"></path>
-                    <path d="M4 12h16"></path>
-                    <path d="M4 17h16"></path>
-                </svg>
-            </summary>
-            <div class="export-menu-items">
-                <a href="exports/{_excel_filename}" download>Excel</a>
-                <a href="exports/{_png_filename}" download>PNG</a>
-            </div>
-        </details>
-    """
-
-
 @app.cell
 def _(mo):
     mo.Html(
         """
-        <style>
-            .figure-heading-title {
-                align-items: center;
-                display: inline-flex;
-                font-size: 1.25rem;
-                font-weight: 700;
-                line-height: 30px;
-            }
-
-            .export-menu {
-                display: inline-flex;
-                position: relative;
-            }
-
-            .figure-export-wrap {
-                display: inline-block;
-                position: relative;
-            }
-
-            .figure-export-image {
-                display: block;
-                height: auto;
-                max-width: 100%;
-            }
-
-            .figure-export-wrap > .export-menu {
-                position: absolute;
-                right: 13%;
-                top: 6%;
-                z-index: 10;
-            }
-
-            .export-menu summary {
-                align-items: center !important;
-                border-radius: 4px !important;
-                color: #5f6f82 !important;
-                cursor: pointer;
-                display: inline-flex !important;
-                height: 42px !important;
-                justify-content: center !important;
-                margin: 0 !important;
-                list-style: none;
-                width: 42px !important;
-            }
-
-            .export-menu summary::-webkit-details-marker {
-                display: none;
-            }
-
-            .export-menu summary:hover {
-                background: #f4f7fa !important;
-                color: #0b2b66 !important;
-            }
-
-            .export-menu svg {
-                color: currentColor !important;
-                fill: none !important;
-                height: 28px !important;
-                stroke: currentColor !important;
-                stroke-linecap: round !important;
-                stroke-linejoin: round !important;
-                stroke-width: 1.8 !important;
-                width: 28px !important;
-            }
-
-            .export-menu-items {
-                background: #ffffff;
-                border: 1px solid #d8e0eb;
-                border-radius: 6px;
-                box-shadow: 0 8px 24px rgba(11, 43, 102, 0.14);
-                display: grid;
-                min-width: 96px;
-                padding: 4px;
-                position: absolute;
-                right: 0;
-                top: 28px;
-                z-index: 10;
-            }
-
-            .export-menu-items a {
-                border-radius: 4px;
-                color: #1f2937;
-                font-size: 0.86rem;
-                line-height: 1.2;
-                padding: 7px 10px;
-                text-decoration: none;
-            }
-
-            .export-menu-items a:hover {
-                background: #f4f7fa;
-                color: #0b2b66;
-            }
-        </style>
         <div style="margin-bottom: 20px;">
             <div style="font-size: 2.2rem; font-weight: 700; color: #0b2b66;">
                 Mobilanalyse marked
@@ -177,30 +54,6 @@ def _(mo):
         """
     )
     return
-
-
-@app.cell
-def _(BytesIO, b64encode, mo):
-    def figure_with_export(_figure, _menu):
-        _buffer = BytesIO()
-        _figure.savefig(
-            _buffer,
-            format="png",
-            dpi=120,
-            bbox_inches="tight",
-            facecolor="white",
-        )
-        _payload = b64encode(_buffer.getvalue()).decode("ascii")
-        return mo.Html(
-            f"""
-            <div class="figure-export-wrap">
-                {_menu}
-                <img class="figure-export-image" src="data:image/png;base64,{_payload}" alt="">
-            </div>
-            """
-        )
-
-    return (figure_with_export,)
 
 
 @app.cell
@@ -294,14 +147,7 @@ def _(df, pl):
 
 
 @app.cell
-def _(
-    figure_with_export,
-    market_share_abonnement,
-    market_share_omsetning,
-    mo,
-    pl,
-    plt,
-):
+def _(market_share_abonnement, market_share_omsetning, mo, pl, plt):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -419,10 +265,8 @@ def _(
         else "Endring mellom siste perioder"
     )
 
-    fig1_abonnement_fig = _plot_market_share(market_share_abonnement, 60)
-    fig1_omsetning_fig = _plot_market_share(market_share_omsetning, 60)
-    _abonnement_export = export_menu("figur-1-abonnement.xlsx", "figur-1-abonnement.png")
-    _omsetning_export = export_menu("figur-1-omsetning.xlsx", "figur-1-omsetning.png")
+    _abonnement_fig = _plot_market_share(market_share_abonnement, 60)
+    _omsetning_fig = _plot_market_share(market_share_omsetning, 60)
 
     _summary = mo.Html(
         f"""
@@ -454,18 +298,18 @@ def _(
                     mo.vstack(
                         [
                             mo.Html(
-                                '<div class="figure-heading-title">Basert på abonnement</div>'
+                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på abonnement</div>'
                             ),
-                            figure_with_export(fig1_abonnement_fig, _abonnement_export),
+                            _abonnement_fig,
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
                             mo.Html(
-                                '<div class="figure-heading-title">Basert på omsetning</div>'
+                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Basert på omsetning</div>'
                             ),
-                            figure_with_export(fig1_omsetning_fig, _omsetning_export),
+                            _omsetning_fig,
                         ],
                         gap=0.5,
                     ),
@@ -522,15 +366,15 @@ def _(market_share_abonnement, market_share_omsetning, pl):
                 if _denominator
                 else 0
             )
+            _intercept = _y_mean - _slope * _x_mean
             _last_year = int(max(_xs))
-            _last_value = _ys[-1]
 
-            for _year in range(_last_year, _last_year + _periods_ahead + 1):
+            for _year in range(int(min(_xs)), _last_year + _periods_ahead + 1):
                 _rows.append(
                     {
                         "ar": _year,
                         "tilbyder": _provider,
-                        "markedsandel": _last_value + _slope * (_year - _last_year),
+                        "markedsandel": _intercept + _slope * _year,
                     }
                 )
 
@@ -546,7 +390,6 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 
 @app.cell
 def _(
-    figure_with_export,
     market_share_abonnement,
     market_share_abonnement_projection,
     market_share_omsetning,
@@ -595,7 +438,7 @@ def _(
                 color=_colors[_provider],
                 linewidth=1.8,
                 linestyle=":",
-                label="_nolegend_",
+                label=f"Lineær ({_provider})",
             )
 
             _latest_actual = _actual_provider.filter(pl.col("ar") == _last_actual_year)
@@ -624,12 +467,11 @@ def _(
                 },
             )
 
+        _ax.set_title(_title, fontsize=10, fontweight="bold", pad=12)
         _ax.set_ylim(0, _upper_y)
         _ax.set_yticks(range(0, _upper_y + 1, 10))
         _ax.set_yticklabels([_percent(_value) for _value in range(0, _upper_y + 1, 10)])
-        _ax.set_xticks(
-            sorted(set(_actual["ar"].unique().to_list() + _projection["ar"].unique().to_list()))
-        )
+        _ax.set_xticks(sorted(_projection["ar"].unique().to_list()))
         _ax.grid(axis="y", color="#d9d9d9", linewidth=0.8)
         _ax.grid(axis="x", visible=False)
         _ax.spines[["top", "right", "left"]].set_visible(False)
@@ -660,45 +502,20 @@ def _(
         )
         if _slope <= 0:
             return f"Lyse Tele (Ice) når ikke {_threshold:.0f} % omsetningsandel med lineær trend."
-        _last_year = max(_xs)
-        _last_value = _ys[-1]
-        _year = _last_year + ((_threshold - _last_value) / _slope)
+        _year = (_threshold - (_y_mean - _slope * _x_mean)) / _slope
         return f"Lyse Tele (Ice) når {_threshold:.0f} % av omsetningen rundt {int(_year + 0.999)}."
 
-    def projection_export_data(_actual, _projection):
-        _actual_export = _actual.with_columns(
-            pl.lit("Historikk").alias("serie"),
-            pl.col("ar").cast(pl.Int64),
-        )
-        _projection_export = _projection.with_columns(
-            pl.lit("Lineær trend").alias("serie"),
-            pl.col("ar").cast(pl.Int64),
-        )
-        return (
-            pl.concat([_actual_export, _projection_export])
-            .select("serie", "ar", "tilbyder", "markedsandel")
-            .sort("serie", "ar", "tilbyder")
-        )
-
-    fig2_abonnement_fig = _plot_projection(
+    _abonnement_projection_fig = _plot_projection(
         market_share_abonnement,
         market_share_abonnement_projection,
         "Abonnement",
         60,
     )
-    fig2_omsetning_fig = _plot_projection(
+    _omsetning_projection_fig = _plot_projection(
         market_share_omsetning,
         market_share_omsetning_projection,
         "Omsetning",
         60,
-    )
-    _abonnement_projection_export = export_menu(
-        "figur-2-abonnement-trend.xlsx",
-        "figur-2-abonnement-trend.png",
-    )
-    _omsetning_projection_export = export_menu(
-        "figur-2-omsetning-trend.xlsx",
-        "figur-2-omsetning-trend.png",
     )
     _forecast_note = mo.Html(
         f"""
@@ -724,26 +541,7 @@ def _(
     mo.vstack(
         [
             mo.hstack(
-                [
-                    mo.vstack(
-                        [
-                            mo.Html(
-                                '<div class="figure-heading-title">Abonnement</div>'
-                            ),
-                            figure_with_export(fig2_abonnement_fig, _abonnement_projection_export),
-                        ],
-                        gap=0.5,
-                    ),
-                    mo.vstack(
-                        [
-                            mo.Html(
-                                '<div class="figure-heading-title">Omsetning</div>'
-                            ),
-                            figure_with_export(fig2_omsetning_fig, _omsetning_projection_export),
-                        ],
-                        gap=0.5,
-                    ),
-                ],
+                [_abonnement_projection_fig, _omsetning_projection_fig],
                 justify="center",
                 gap=2,
             ),
@@ -820,7 +618,7 @@ def _(df, pl):
 
 
 @app.cell
-def _(figure_with_export, market_share_abonnement_segment, mo, pl, plt):
+def _(market_share_abonnement_segment, mo, pl, plt):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -937,10 +735,8 @@ def _(figure_with_export, market_share_abonnement_segment, mo, pl, plt):
         if _prev_period is not None and _curr_period is not None
         else "Endring mellom siste perioder"
     )
-    fig3_private_fig = _plot_segment("Privat", 50)
-    fig3_business_fig = _plot_segment("Bedrift")
-    _private_export = export_menu("figur-3-privat.xlsx", "figur-3-privat.png")
-    _business_export = export_menu("figur-3-bedrift.xlsx", "figur-3-bedrift.png")
+    _private_fig = _plot_segment("Privat", 50)
+    _business_fig = _plot_segment("Bedrift")
     _summary = mo.Html(
         f"""
         <div style="
@@ -971,18 +767,18 @@ def _(figure_with_export, market_share_abonnement_segment, mo, pl, plt):
                     mo.vstack(
                         [
                             mo.Html(
-                                '<div class="figure-heading-title">Privat</div>'
+                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Privat</div>'
                             ),
-                            figure_with_export(fig3_private_fig, _private_export),
+                            _private_fig,
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
                             mo.Html(
-                                '<div class="figure-heading-title">Bedrift</div>'
+                                '<div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Bedrift</div>'
                             ),
-                            figure_with_export(fig3_business_fig, _business_export),
+                            _business_fig,
                         ],
                         gap=0.5,
                     ),

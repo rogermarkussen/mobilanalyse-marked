@@ -8,7 +8,6 @@ rm -rf dist
 mkdir -p dist/data
 
 cp data/mobil.parquet dist/data/mobil.parquet
-uv run python scripts/build_exports.py
 
 uv run marimo export html-wasm mobilanalyse.py \
   --output dist \
