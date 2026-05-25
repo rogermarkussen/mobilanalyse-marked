@@ -134,12 +134,17 @@ def _(
         _sheet.freeze_panes = "A4"
         _sheet.auto_filter.ref = _table_ref
 
-        for _column in _sheet.columns:
-            _max_length = max(
-                len(str(_cell.value)) if _cell.value is not None else 0
-                for _cell in _column
-            )
-            _sheet.column_dimensions[_column[0].column_letter].width = min(
+        for _column_index, _header in enumerate(_headers, start=1):
+            _max_length = len(str(_header))
+            for _row_index in range(4, _sheet.max_row + 1):
+                _value = _sheet.cell(row=_row_index, column=_column_index).value
+                _max_length = max(
+                    _max_length,
+                    len(str(_value)) if _value is not None else 0,
+                )
+            _sheet.column_dimensions[
+                _sheet.cell(row=3, column=_column_index).column_letter
+            ].width = min(
                 max(_max_length + 2, 12),
                 28,
             )
@@ -677,8 +682,14 @@ def _(
         return f"Lyse Tele (Ice) når {_threshold:.0f} % av omsetningen rundt {int(_year + 0.999)}."
 
     def _projection_export_data(_actual, _projection):
-        _actual_export = _actual.with_columns(pl.lit("Historikk").alias("serie"))
-        _projection_export = _projection.with_columns(pl.lit("Lineær trend").alias("serie"))
+        _actual_export = _actual.with_columns(
+            pl.lit("Historikk").alias("serie"),
+            pl.col("ar").cast(pl.Int64),
+        )
+        _projection_export = _projection.with_columns(
+            pl.lit("Lineær trend").alias("serie"),
+            pl.col("ar").cast(pl.Int64),
+        )
         return (
             pl.concat([_actual_export, _projection_export])
             .select("serie", "ar", "tilbyder", "markedsandel")
