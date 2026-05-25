@@ -25,7 +25,6 @@ def _():
     import polars as pl
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-    from openpyxl.worksheet.table import Table, TableStyleInfo
 
     try:
         from pyodide.http import pyfetch
@@ -39,8 +38,6 @@ def _():
         Path,
         PatternFill,
         Side,
-        Table,
-        TableStyleInfo,
         Workbook,
         mo,
         pl,
@@ -63,19 +60,7 @@ async def _(Path, pl, pyfetch):
 
 
 @app.cell
-def _(
-    Alignment,
-    Border,
-    BytesIO,
-    Font,
-    PatternFill,
-    Side,
-    Table,
-    TableStyleInfo,
-    Workbook,
-    mo,
-    pl,
-):
+def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
     def excel_download(_data, _filename, _title, _sheet_name="Data"):
         _export_data = _data.with_columns(
             (pl.col("markedsandel") / 100).alias("markedsandel")
@@ -122,15 +107,10 @@ def _(
                     _cell.number_format = "0.0%"
 
         _table_ref = f"A3:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
-        _table = Table(displayName="Markedsandeler", ref=_table_ref)
-        _table.tableStyleInfo = TableStyleInfo(
-            name="TableStyleMedium2",
-            showFirstColumn=False,
-            showLastColumn=False,
-            showRowStripes=True,
-            showColumnStripes=False,
-        )
-        _sheet.add_table(_table)
+        for _row_index in range(4, _sheet.max_row + 1):
+            if _row_index % 2 == 0:
+                for _cell in _sheet[_row_index]:
+                    _cell.fill = PatternFill("solid", fgColor="EEF3F8")
         _sheet.freeze_panes = "A4"
         _sheet.auto_filter.ref = _table_ref
 
@@ -156,7 +136,7 @@ def _(
             data=_buffer.getvalue(),
             filename=_filename,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            label="Excel-eksport",
+            label="",
         )
 
     return (excel_download,)
@@ -181,13 +161,23 @@ def _(mo):
                 font-weight: 700;
             }
 
-            body button {
-                width: auto !important;
+            button[download], a[download], body button {
+                align-items: center !important;
+                border-radius: 6px !important;
+                display: inline-flex !important;
+                height: 28px !important;
+                justify-content: center !important;
+                width: 34px !important;
                 min-width: 0 !important;
-                max-width: fit-content !important;
-                padding: 4px 10px !important;
-                font-size: 0.82rem !important;
+                max-width: 34px !important;
+                padding: 0 !important;
+                font-size: 0 !important;
                 line-height: 1.2 !important;
+            }
+
+            button[download] svg, a[download] svg, body button svg {
+                height: 15px !important;
+                width: 15px !important;
             }
         </style>
         <div style="margin-bottom: 20px;">
