@@ -47,7 +47,16 @@ async def _(Path, pl, pyfetch):
 @app.function
 def export_menu(_excel_filename, _png_filename):
     return f"""
-        <details class="export-menu">
+        <details class="export-menu" ontoggle="if (this.open) setTimeout(() => {{
+            if (!window.__closeExportMenus) {{
+                window.__closeExportMenus = (event) => {{
+                    document.querySelectorAll('.export-menu[open]').forEach((menu) => {{
+                        if (!menu.contains(event.target)) menu.removeAttribute('open');
+                    }});
+                }};
+                document.addEventListener('click', window.__closeExportMenus);
+            }}
+        }}, 0);">
             <summary aria-label="Eksporter figur" title="Eksporter figur">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M4 7h16"></path>
@@ -155,31 +164,11 @@ def _(mo):
                 text-decoration: none;
             }
 
-            .export-menu-loading summary {
-                opacity: 0.45;
-            }
-
-            .export-menu-items span {
-                color: #64748b;
-                font-size: 0.82rem;
-                padding: 7px 10px;
-                white-space: nowrap;
-            }
-
             .export-menu-items a:hover {
                 background: #f4f7fa;
                 color: #0b2b66;
             }
         </style>
-        <script>
-            document.addEventListener("click", (event) => {
-                document.querySelectorAll(".export-menu[open]").forEach((menu) => {
-                    if (!menu.contains(event.target)) {
-                        menu.removeAttribute("open");
-                    }
-                });
-            });
-        </script>
         <div style="margin-bottom: 20px;">
             <div style="font-size: 2.2rem; font-weight: 700; color: #0b2b66;">
                 Mobilanalyse marked
