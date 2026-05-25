@@ -71,7 +71,6 @@ def _(
     Side,
     Workbook,
     b64encode,
-    mo,
     pl,
 ):
     def export_menu(
@@ -284,8 +283,7 @@ def _(
         )
         _png_payload = b64encode(_png_buffer.getvalue()).decode("ascii")
 
-        return mo.Html(
-            f"""
+        return f"""
             <details class="export-menu">
                 <summary aria-label="Eksporter figur" title="Eksporter figur">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -306,7 +304,6 @@ def _(
                 </div>
             </details>
             """
-        )
 
     return (export_menu,)
 
@@ -327,6 +324,24 @@ def _(mo):
             .export-menu {
                 display: inline-flex;
                 position: relative;
+            }
+
+            .figure-export-wrap {
+                display: inline-block;
+                position: relative;
+            }
+
+            .figure-export-image {
+                display: block;
+                height: auto;
+                max-width: 100%;
+            }
+
+            .figure-export-wrap > .export-menu {
+                position: absolute;
+                right: 6px;
+                top: 4px;
+                z-index: 10;
             }
 
             .export-menu summary {
@@ -399,6 +414,30 @@ def _(mo):
         """
     )
     return
+
+
+@app.cell
+def _(BytesIO, b64encode, mo):
+    def figure_with_export(_figure, _menu):
+        _buffer = BytesIO()
+        _figure.savefig(
+            _buffer,
+            format="png",
+            dpi=120,
+            bbox_inches="tight",
+            facecolor="white",
+        )
+        _payload = b64encode(_buffer.getvalue()).decode("ascii")
+        return mo.Html(
+            f"""
+            <div class="figure-export-wrap">
+                {_menu}
+                <img class="figure-export-image" src="data:image/png;base64,{_payload}" alt="">
+            </div>
+            """
+        )
+
+    return (figure_with_export,)
 
 
 @app.cell
@@ -494,6 +533,7 @@ def _(df, pl):
 @app.cell
 def _(
     export_menu,
+    figure_with_export,
     market_share_abonnement,
     market_share_omsetning,
     mo,
@@ -665,31 +705,19 @@ def _(
                 [
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Basert på abonnement</div>'
-                                    ),
-                                    _abonnement_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Basert på abonnement</div>'
                             ),
-                            _abonnement_fig,
+                            figure_with_export(_abonnement_fig, _abonnement_export),
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Basert på omsetning</div>'
-                                    ),
-                                    _omsetning_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Basert på omsetning</div>'
                             ),
-                            _omsetning_fig,
+                            figure_with_export(_omsetning_fig, _omsetning_export),
                         ],
                         gap=0.5,
                     ),
@@ -771,6 +799,7 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 @app.cell
 def _(
     export_menu,
+    figure_with_export,
     market_share_abonnement,
     market_share_abonnement_projection,
     market_share_omsetning,
@@ -959,31 +988,19 @@ def _(
                 [
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Abonnement</div>'
-                                    ),
-                                    _abonnement_projection_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Abonnement</div>'
                             ),
-                            _abonnement_projection_fig,
+                            figure_with_export(_abonnement_projection_fig, _abonnement_projection_export),
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Omsetning</div>'
-                                    ),
-                                    _omsetning_projection_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Omsetning</div>'
                             ),
-                            _omsetning_projection_fig,
+                            figure_with_export(_omsetning_projection_fig, _omsetning_projection_export),
                         ],
                         gap=0.5,
                     ),
@@ -1064,7 +1081,14 @@ def _(df, pl):
 
 
 @app.cell
-def _(export_menu, market_share_abonnement_segment, mo, pl, plt):
+def _(
+    export_menu,
+    figure_with_export,
+    market_share_abonnement_segment,
+    mo,
+    pl,
+    plt,
+):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -1228,31 +1252,19 @@ def _(export_menu, market_share_abonnement_segment, mo, pl, plt):
                 [
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Privat</div>'
-                                    ),
-                                    _private_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Privat</div>'
                             ),
-                            _private_fig,
+                            figure_with_export(_private_fig, _private_export),
                         ],
                         gap=0.5,
                     ),
                     mo.vstack(
                         [
-                            mo.hstack(
-                                [
-                                    mo.Html(
-                                        '<div class="figure-heading-title">Bedrift</div>'
-                                    ),
-                                    _business_export,
-                                ],
-                                justify="space-between",
+                            mo.Html(
+                                '<div class="figure-heading-title">Bedrift</div>'
                             ),
-                            _business_fig,
+                            figure_with_export(_business_fig, _business_export),
                         ],
                         gap=0.5,
                     ),
