@@ -233,40 +233,48 @@ def _(mo):
     mo.Html(
         """
         <style>
-            .excel-heading-row {
+            .figure-heading-title {
                 align-items: center;
                 display: inline-flex;
-                gap: 12px;
-                margin-bottom: 8px;
-                width: auto;
-            }
-
-            .excel-heading-row .excel-title {
                 font-size: 1.25rem;
                 font-weight: 700;
+                line-height: 30px;
             }
 
             button[download], a[download], body button {
                 align-items: center !important;
+                background: #107c41 !important;
+                border: 1px solid #0b5f31 !important;
                 border-radius: 6px !important;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16) !important;
+                color: #ffffff !important;
+                cursor: pointer !important;
                 display: inline-flex !important;
-                height: 28px !important;
+                height: 30px !important;
                 justify-content: center !important;
-                width: 34px !important;
+                margin: 0 !important;
                 min-width: 0 !important;
-                max-width: 34px !important;
+                max-width: 32px !important;
                 padding: 0 !important;
                 font-size: 0 !important;
                 line-height: 1.2 !important;
+                width: 32px !important;
             }
 
             button[download] span, a[download] span, body button span {
                 display: none !important;
             }
 
+            button[download]:hover, a[download]:hover, body button:hover {
+                background: #0b6f3a !important;
+                border-color: #064f27 !important;
+            }
+
             button[download] svg, a[download] svg, body button svg {
-                height: 15px !important;
-                width: 15px !important;
+                color: #ffffff !important;
+                height: 16px !important;
+                stroke: currentColor !important;
+                width: 16px !important;
             }
         </style>
         <div style="margin-bottom: 20px;">
@@ -542,11 +550,12 @@ def _(
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Basert på abonnement</div></div>'
+                                        '<div class="figure-heading-title">Basert på abonnement</div>'
                                     ),
                                     _abonnement_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.35,
                             ),
                             _abonnement_fig,
                         ],
@@ -557,11 +566,12 @@ def _(
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Basert på omsetning</div></div>'
+                                        '<div class="figure-heading-title">Basert på omsetning</div>'
                                     ),
                                     _omsetning_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.35,
                             ),
                             _omsetning_fig,
                         ],
@@ -832,12 +842,12 @@ def _(
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Abonnement</div></div>'
+                                        '<div class="figure-heading-title">Abonnement</div>'
                                     ),
                                     _abonnement_projection_export,
                                 ],
                                 justify="start",
-                                gap=0.5,
+                                gap=0.35,
                             ),
                             _abonnement_projection_fig,
                         ],
@@ -848,12 +858,12 @@ def _(
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Omsetning</div></div>'
+                                        '<div class="figure-heading-title">Omsetning</div>'
                                     ),
                                     _omsetning_projection_export,
                                 ],
                                 justify="start",
-                                gap=0.5,
+                                gap=0.35,
                             ),
                             _omsetning_projection_fig,
                         ],
@@ -1099,11 +1109,12 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Privat</div></div>'
+                                        '<div class="figure-heading-title">Privat</div>'
                                     ),
                                     _private_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.35,
                             ),
                             _private_fig,
                         ],
@@ -1114,11 +1125,12 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
                             mo.hstack(
                                 [
                                     mo.Html(
-                                        '<div class="excel-heading-row"><div class="excel-title">Bedrift</div></div>'
+                                        '<div class="figure-heading-title">Bedrift</div>'
                                     ),
                                     _business_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.35,
                             ),
                             _business_fig,
                         ],
