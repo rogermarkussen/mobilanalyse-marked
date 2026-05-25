@@ -74,7 +74,14 @@ def _(
     mo,
     pl,
 ):
-    def excel_download(_data, _filename, _title, _sheet_name="Data"):
+    def export_menu(
+        _data,
+        _excel_filename,
+        _title,
+        _sheet_name,
+        _figure,
+        _png_filename,
+    ):
         _is_trend_export = "serie" in _data.columns
         if _is_trend_export:
             _index_columns = [
@@ -266,27 +273,42 @@ def _(
 
         _buffer = BytesIO()
         _workbook.save(_buffer)
-        _payload = b64encode(_buffer.getvalue()).decode("ascii")
+        _excel_payload = b64encode(_buffer.getvalue()).decode("ascii")
+        _png_buffer = BytesIO()
+        _figure.savefig(
+            _png_buffer,
+            format="png",
+            dpi=180,
+            bbox_inches="tight",
+            facecolor="white",
+        )
+        _png_payload = b64encode(_png_buffer.getvalue()).decode("ascii")
 
         return mo.Html(
             f"""
-            <a
-                class="excel-download"
-                href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{_payload}"
-                download="{_filename}"
-                aria-label="Last ned Excel"
-                title="Last ned Excel"
-            >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 3v11"></path>
-                    <path d="M7.5 9.5 12 14l4.5-4.5"></path>
-                    <path d="M5 18h14"></path>
-                </svg>
-            </a>
+            <details class="export-menu">
+                <summary aria-label="Eksporter figur" title="Eksporter figur">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7h16"></path>
+                        <path d="M4 12h16"></path>
+                        <path d="M4 17h16"></path>
+                    </svg>
+                </summary>
+                <div class="export-menu-items">
+                    <a
+                        href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{_excel_payload}"
+                        download="{_excel_filename}"
+                    >Excel</a>
+                    <a
+                        href="data:image/png;base64,{_png_payload}"
+                        download="{_png_filename}"
+                    >PNG</a>
+                </div>
+            </details>
             """
         )
 
-    return (excel_download,)
+    return (export_menu,)
 
 
 @app.cell
@@ -302,25 +324,35 @@ def _(mo):
                 line-height: 30px;
             }
 
-            .excel-download {
+            .export-menu {
+                display: inline-flex;
+                position: relative;
+            }
+
+            .export-menu summary {
                 align-items: center !important;
                 border-radius: 4px !important;
                 color: #5f6f82 !important;
+                cursor: pointer;
                 display: inline-flex !important;
                 height: 22px !important;
                 justify-content: center !important;
                 margin: 0 !important;
-                text-decoration: none !important;
+                list-style: none;
                 transform: translateY(1px);
                 width: 22px !important;
             }
 
-            .excel-download:hover {
+            .export-menu summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .export-menu summary:hover {
                 background: #f4f7fa !important;
                 color: #0b2b66 !important;
             }
 
-            .excel-download svg {
+            .export-menu svg {
                 color: currentColor !important;
                 fill: none !important;
                 height: 14px !important;
@@ -329,6 +361,34 @@ def _(mo):
                 stroke-linejoin: round !important;
                 stroke-width: 1.8 !important;
                 width: 14px !important;
+            }
+
+            .export-menu-items {
+                background: #ffffff;
+                border: 1px solid #d8e0eb;
+                border-radius: 6px;
+                box-shadow: 0 8px 24px rgba(11, 43, 102, 0.14);
+                display: grid;
+                min-width: 96px;
+                padding: 4px;
+                position: absolute;
+                right: 0;
+                top: 28px;
+                z-index: 10;
+            }
+
+            .export-menu-items a {
+                border-radius: 4px;
+                color: #1f2937;
+                font-size: 0.86rem;
+                line-height: 1.2;
+                padding: 7px 10px;
+                text-decoration: none;
+            }
+
+            .export-menu-items a:hover {
+                background: #f4f7fa;
+                color: #0b2b66;
             }
         </style>
         <div style="margin-bottom: 20px;">
@@ -433,7 +493,7 @@ def _(df, pl):
 
 @app.cell
 def _(
-    excel_download,
+    export_menu,
     market_share_abonnement,
     market_share_omsetning,
     mo,
@@ -559,17 +619,21 @@ def _(
 
     _abonnement_fig = _plot_market_share(market_share_abonnement, 60)
     _omsetning_fig = _plot_market_share(market_share_omsetning, 60)
-    _abonnement_export = excel_download(
+    _abonnement_export = export_menu(
         market_share_abonnement,
         "figur-1-abonnement.xlsx",
         "Figur 1 - Markedsandeler basert på abonnement",
         "Abonnement",
+        _abonnement_fig,
+        "figur-1-abonnement.png",
     )
-    _omsetning_export = excel_download(
+    _omsetning_export = export_menu(
         market_share_omsetning,
         "figur-1-omsetning.xlsx",
         "Figur 1 - Markedsandeler basert på omsetning",
         "Omsetning",
+        _omsetning_fig,
+        "figur-1-omsetning.png",
     )
 
     _summary = mo.Html(
@@ -608,8 +672,7 @@ def _(
                                     ),
                                     _abonnement_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _abonnement_fig,
                         ],
@@ -624,8 +687,7 @@ def _(
                                     ),
                                     _omsetning_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _omsetning_fig,
                         ],
@@ -708,7 +770,7 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 
 @app.cell
 def _(
-    excel_download,
+    export_menu,
     market_share_abonnement,
     market_share_abonnement_projection,
     market_share_omsetning,
@@ -854,17 +916,21 @@ def _(
         "Omsetning",
         60,
     )
-    _abonnement_projection_export = excel_download(
+    _abonnement_projection_export = export_menu(
         _projection_export_data(market_share_abonnement, market_share_abonnement_projection),
         "figur-2-abonnement-trend.xlsx",
         "Figur 2 - Lineær trend basert på abonnement",
         "Abonnement trend",
+        _abonnement_projection_fig,
+        "figur-2-abonnement-trend.png",
     )
-    _omsetning_projection_export = excel_download(
+    _omsetning_projection_export = export_menu(
         _projection_export_data(market_share_omsetning, market_share_omsetning_projection),
         "figur-2-omsetning-trend.xlsx",
         "Figur 2 - Lineær trend basert på omsetning",
         "Omsetning trend",
+        _omsetning_projection_fig,
+        "figur-2-omsetning-trend.png",
     )
     _forecast_note = mo.Html(
         f"""
@@ -900,8 +966,7 @@ def _(
                                     ),
                                     _abonnement_projection_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _abonnement_projection_fig,
                         ],
@@ -916,8 +981,7 @@ def _(
                                     ),
                                     _omsetning_projection_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _omsetning_projection_fig,
                         ],
@@ -1000,7 +1064,7 @@ def _(df, pl):
 
 
 @app.cell
-def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
+def _(export_menu, market_share_abonnement_segment, mo, pl, plt):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -1119,17 +1183,21 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
     )
     _private_fig = _plot_segment("Privat", 50)
     _business_fig = _plot_segment("Bedrift")
-    _private_export = excel_download(
+    _private_export = export_menu(
         market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
         "figur-3-privat.xlsx",
         "Figur 3 - Abonnement i privatmarkedet",
         "Privat",
+        _private_fig,
+        "figur-3-privat.png",
     )
-    _business_export = excel_download(
+    _business_export = export_menu(
         market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
         "figur-3-bedrift.xlsx",
         "Figur 3 - Abonnement i bedriftsmarkedet",
         "Bedrift",
+        _business_fig,
+        "figur-3-bedrift.png",
     )
     _summary = mo.Html(
         f"""
@@ -1167,8 +1235,7 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
                                     ),
                                     _private_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _private_fig,
                         ],
@@ -1183,8 +1250,7 @@ def _(excel_download, market_share_abonnement_segment, mo, pl, plt):
                                     ),
                                     _business_export,
                                 ],
-                                justify="start",
-                                gap=0.35,
+                                justify="space-between",
                             ),
                             _business_fig,
                         ],
