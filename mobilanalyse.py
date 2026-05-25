@@ -339,8 +339,8 @@ def _(mo):
 
             .figure-export-wrap > .export-menu {
                 position: absolute;
-                right: 6px;
-                top: 4px;
+                right: 13%;
+                top: 6%;
                 z-index: 10;
             }
 
@@ -350,12 +350,11 @@ def _(mo):
                 color: #5f6f82 !important;
                 cursor: pointer;
                 display: inline-flex !important;
-                height: 22px !important;
+                height: 30px !important;
                 justify-content: center !important;
                 margin: 0 !important;
                 list-style: none;
-                transform: translateY(1px);
-                width: 22px !important;
+                width: 30px !important;
             }
 
             .export-menu summary::-webkit-details-marker {
@@ -370,12 +369,12 @@ def _(mo):
             .export-menu svg {
                 color: currentColor !important;
                 fill: none !important;
-                height: 14px !important;
+                height: 19px !important;
                 stroke: currentColor !important;
                 stroke-linecap: round !important;
                 stroke-linejoin: round !important;
                 stroke-width: 1.8 !important;
-                width: 14px !important;
+                width: 19px !important;
             }
 
             .export-menu-items {
