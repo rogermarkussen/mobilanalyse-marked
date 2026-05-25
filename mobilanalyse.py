@@ -167,18 +167,36 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
         _header_fill = PatternFill("solid", fgColor="0B2B66")
         _header_font = Font(bold=True, color="FFFFFF")
         _thin = Side(style="thin", color="D9D9D9")
+        _medium_blue = Side(style="medium", color="0B2B66")
         _border = Border(bottom=_thin)
 
         if _is_trend_export:
+            _history_fill = PatternFill("solid", fgColor="E9F2DF")
+            _trend_fill = PatternFill("solid", fgColor="DDEBF7")
             for _cell in _sheet[3]:
-                _cell.fill = PatternFill("solid", fgColor="E9F2DF")
+                _cell.fill = _history_fill
                 _cell.font = Font(bold=True, color="000000")
                 _cell.alignment = Alignment(horizontal="center")
+                _cell.border = Border(top=_medium_blue, bottom=_thin)
+            for _column_index in range(_trend_start, _trend_end + 1):
+                _cell = _sheet.cell(row=3, column=_column_index)
+                _cell.fill = _trend_fill
+                _cell.border = Border(top=_medium_blue, bottom=_thin)
+            for _row_index in range(3, _sheet.max_row + 1):
+                _left_cell = _sheet.cell(row=_row_index, column=_trend_start)
+                _left_cell.border = Border(
+                    left=_medium_blue,
+                    right=_left_cell.border.right,
+                    top=_left_cell.border.top,
+                    bottom=_left_cell.border.bottom,
+                )
 
         for _cell in _sheet[_header_row]:
             _cell.fill = _header_fill
             _cell.font = _header_font
             _cell.alignment = Alignment(horizontal="center")
+            if _is_trend_export and _cell.column >= _trend_start:
+                _cell.fill = PatternFill("solid", fgColor="1F4E79")
 
         for _row in _sheet.iter_rows(
             min_row=_first_data_row,
@@ -197,6 +215,24 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
             if (_row_index - _first_data_row) % 2 == 0:
                 for _cell in _sheet[_row_index]:
                     _cell.fill = PatternFill("solid", fgColor="EEF3F8")
+            if _is_trend_export:
+                for _column_index in range(len(_index_columns) + 1, _history_end + 1):
+                    _sheet.cell(row=_row_index, column=_column_index).fill = PatternFill(
+                        "solid",
+                        fgColor="F3F8EC",
+                    )
+                for _column_index in range(_trend_start, _trend_end + 1):
+                    _sheet.cell(row=_row_index, column=_column_index).fill = PatternFill(
+                        "solid",
+                        fgColor="EAF3FB",
+                    )
+                _left_cell = _sheet.cell(row=_row_index, column=_trend_start)
+                _left_cell.border = Border(
+                    left=_medium_blue,
+                    right=_left_cell.border.right,
+                    top=_left_cell.border.top,
+                    bottom=_left_cell.border.bottom,
+                )
         _sheet.freeze_panes = f"A{_first_data_row}"
         _sheet.auto_filter.ref = _table_ref
 
