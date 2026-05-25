@@ -3,7 +3,6 @@
 # dependencies = [
 #   "marimo>=0.23.3",
 #   "matplotlib>=3.8.0",
-#   "openpyxl>=3.1.0",
 #   "pyarrow>=16.0.0",
 #   "polars>=1.0.0",
 # ]
@@ -19,35 +18,17 @@ app = marimo.App(width="full")
 def _():
     from base64 import b64encode
     from io import BytesIO
-    from json import dumps
     from pathlib import Path
 
     import matplotlib.pyplot as plt
     import marimo as mo
     import polars as pl
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
     try:
         from pyodide.http import pyfetch
     except ImportError:
         pyfetch = None
-    return (
-        Alignment,
-        Border,
-        BytesIO,
-        Font,
-        Path,
-        PatternFill,
-        Side,
-        Workbook,
-        b64encode,
-        dumps,
-        mo,
-        pl,
-        plt,
-        pyfetch,
-    )
+    return BytesIO, Path, b64encode, mo, pl, plt, pyfetch
 
 
 @app.cell
@@ -63,276 +44,23 @@ async def _(Path, pl, pyfetch):
     return (df,)
 
 
-@app.cell
-def _(
-    Alignment,
-    Border,
-    BytesIO,
-    Font,
-    PatternFill,
-    Side,
-    Workbook,
-    b64encode,
-    dumps,
-    pl,
-):
-    def export_menu(
-        _menu_id,
-        _data,
-        _excel_filename,
-        _title,
-        _sheet_name,
-        _figure,
-        _png_filename,
-    ):
-        _is_trend_export = "serie" in _data.columns
-        if _is_trend_export:
-            _index_columns = [
-                _column for _column in ["ms", "tilbyder"] if _column in _data.columns
-            ]
-            _history_years = sorted(
-                _data.filter(pl.col("serie") == "Historikk")["ar"].unique().to_list()
-            )
-            _last_history_year = max(_history_years)
-            _trend_years = sorted(
-                _data.filter(
-                    (pl.col("serie") == "Lineær trend")
-                    & (pl.col("ar") > _last_history_year)
-                )["ar"].unique().to_list()
-            )
-            _export_data = (
-                _data.filter(
-                    (pl.col("serie") == "Historikk")
-                    | (
-                        (pl.col("serie") == "Lineær trend")
-                        & (pl.col("ar") > _last_history_year)
-                    )
-                )
-                .with_columns(
-                    (pl.col("markedsandel") / 100).alias("markedsandel"),
-                    pl.col("ar").cast(pl.Utf8),
-                )
-                .pivot(
-                    values="markedsandel",
-                    index=_index_columns,
-                    on="ar",
-                    aggregate_function="first",
-                )
-                .select(
-                    _index_columns
-                    + [str(_year) for _year in _history_years + _trend_years]
-                )
-                .sort(_index_columns)
-            )
-            _years = _history_years + _trend_years
-        else:
-            _index_columns = [
-                _column for _column in ["ms", "tilbyder"] if _column in _data.columns
-            ]
-            _years = sorted(_data["ar"].unique().to_list())
-            _export_data = (
-                _data.with_columns(
-                    (pl.col("markedsandel") / 100).alias("markedsandel"),
-                    pl.col("ar").cast(pl.Utf8),
-                )
-                .pivot(
-                    values="markedsandel",
-                    index=_index_columns,
-                    on="ar",
-                    aggregate_function="first",
-                )
-                .select(_index_columns + [str(_year) for _year in _years])
-                .sort(_index_columns)
-            )
-        _headers = _export_data.columns
-        _header_row = 4 if _is_trend_export else 3
-        _first_data_row = _header_row + 1
-        _workbook = Workbook()
-        _sheet = _workbook.active
-        _sheet.title = _sheet_name[:31]
-
-        _sheet["A1"] = _title
-        _sheet["A1"].font = Font(bold=True, size=14, color="0B2B66")
-        _sheet.merge_cells(
-            start_row=1,
-            start_column=1,
-            end_row=1,
-            end_column=max(1, len(_headers)),
-        )
-
-        _sheet.append([])
-        if _is_trend_export:
-            _sheet.append([""] * len(_headers))
-            _history_start = len(_index_columns) + 1
-            _history_end = _history_start + len(_history_years) - 1
-            _trend_start = _history_end + 1
-            _trend_end = _trend_start + len(_trend_years) - 1
-            if _history_years:
-                _sheet.merge_cells(
-                    start_row=3,
-                    start_column=_history_start,
-                    end_row=3,
-                    end_column=_history_end,
-                )
-                _sheet.cell(row=3, column=_history_start).value = "Historikk"
-            if _trend_years:
-                _sheet.merge_cells(
-                    start_row=3,
-                    start_column=_trend_start,
-                    end_row=3,
-                    end_column=_trend_end,
-                )
-                _sheet.cell(row=3, column=_trend_start).value = "Lineær trend"
-        _sheet.append(_headers)
-        for _row in _export_data.iter_rows():
-            _sheet.append(list(_row))
-
-        _header_fill = PatternFill("solid", fgColor="0B2B66")
-        _header_font = Font(bold=True, color="FFFFFF")
-        _thin = Side(style="thin", color="D9D9D9")
-        _medium_blue = Side(style="medium", color="0B2B66")
-        _border = Border(bottom=_thin)
-
-        if _is_trend_export:
-            _history_fill = PatternFill("solid", fgColor="E9F2DF")
-            _trend_fill = PatternFill("solid", fgColor="DDEBF7")
-            for _cell in _sheet[3]:
-                _cell.fill = _history_fill
-                _cell.font = Font(bold=True, color="000000")
-                _cell.alignment = Alignment(horizontal="center")
-                _cell.border = Border(top=_medium_blue, bottom=_thin)
-            for _column_index in range(_trend_start, _trend_end + 1):
-                _cell = _sheet.cell(row=3, column=_column_index)
-                _cell.fill = _trend_fill
-                _cell.border = Border(top=_medium_blue, bottom=_thin)
-            for _row_index in range(3, _sheet.max_row + 1):
-                _left_cell = _sheet.cell(row=_row_index, column=_trend_start)
-                _left_cell.border = Border(
-                    left=_medium_blue,
-                    right=_left_cell.border.right,
-                    top=_left_cell.border.top,
-                    bottom=_left_cell.border.bottom,
-                )
-
-        for _cell in _sheet[_header_row]:
-            _cell.fill = _header_fill
-            _cell.font = _header_font
-            _cell.alignment = Alignment(horizontal="center")
-            if _is_trend_export and _cell.column >= _trend_start:
-                _cell.fill = PatternFill("solid", fgColor="1F4E79")
-
-        for _row in _sheet.iter_rows(
-            min_row=_first_data_row,
-            max_row=_sheet.max_row,
-            max_col=_sheet.max_column,
-        ):
-            for _cell in _row:
-                _cell.border = _border
-                if _cell.column_letter == "A":
-                    _cell.alignment = Alignment(horizontal="left")
-                if _headers[_cell.column - 1] in [str(_year) for _year in _years]:
-                    _cell.number_format = "0.0%"
-
-        _table_ref = f"A{_header_row}:{_sheet.cell(_sheet.max_row, _sheet.max_column).coordinate}"
-        for _row_index in range(_first_data_row, _sheet.max_row + 1):
-            if (_row_index - _first_data_row) % 2 == 0:
-                for _cell in _sheet[_row_index]:
-                    _cell.fill = PatternFill("solid", fgColor="EEF3F8")
-            if _is_trend_export:
-                for _column_index in range(len(_index_columns) + 1, _history_end + 1):
-                    _sheet.cell(row=_row_index, column=_column_index).fill = PatternFill(
-                        "solid",
-                        fgColor="F3F8EC",
-                    )
-                for _column_index in range(_trend_start, _trend_end + 1):
-                    _sheet.cell(row=_row_index, column=_column_index).fill = PatternFill(
-                        "solid",
-                        fgColor="EAF3FB",
-                    )
-                _left_cell = _sheet.cell(row=_row_index, column=_trend_start)
-                _left_cell.border = Border(
-                    left=_medium_blue,
-                    right=_left_cell.border.right,
-                    top=_left_cell.border.top,
-                    bottom=_left_cell.border.bottom,
-                )
-        _sheet.freeze_panes = f"A{_first_data_row}"
-        _sheet.auto_filter.ref = _table_ref
-
-        for _column_index, _header in enumerate(_headers, start=1):
-            _max_length = len(str(_header))
-            for _row_index in range(_first_data_row, _sheet.max_row + 1):
-                _value = _sheet.cell(row=_row_index, column=_column_index).value
-                _max_length = max(
-                    _max_length,
-                    len(str(_value)) if _value is not None else 0,
-            )
-            _sheet.column_dimensions[
-                _sheet.cell(row=_header_row, column=_column_index).column_letter
-            ].width = min(
-                max(_max_length + 2, 12),
-                28,
-            )
-
-        _buffer = BytesIO()
-        _workbook.save(_buffer)
-        _excel_payload = b64encode(_buffer.getvalue()).decode("ascii")
-        _png_buffer = BytesIO()
-        _figure.savefig(
-            _png_buffer,
-            format="png",
-            dpi=180,
-            bbox_inches="tight",
-            facecolor="white",
-        )
-        _png_payload = b64encode(_png_buffer.getvalue()).decode("ascii")
-
-        _menu_html = f"""
-            <details id="{_menu_id}" class="export-menu">
-                <summary aria-label="Eksporter figur" title="Eksporter figur">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 7h16"></path>
-                        <path d="M4 12h16"></path>
-                        <path d="M4 17h16"></path>
-                    </svg>
-                </summary>
-                <div class="export-menu-items">
-                    <a
-                        href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{_excel_payload}"
-                        download="{_excel_filename}"
-                    >Excel</a>
-                    <a
-                        href="data:image/png;base64,{_png_payload}"
-                        download="{_png_filename}"
-                    >PNG</a>
-                </div>
-            </details>
-            """
-
-        return (
-            "<script>"
-            f"const menu = document.getElementById({dumps(_menu_id)});"
-            f"if (menu) menu.outerHTML = {dumps(_menu_html)};"
-            "</script>"
-        )
-
-    def export_menu_placeholder(_menu_id):
-        return f"""
-            <details id="{_menu_id}" class="export-menu export-menu-loading">
-                <summary aria-label="Eksport klargjøres" title="Eksport klargjøres">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 7h16"></path>
-                        <path d="M4 12h16"></path>
-                        <path d="M4 17h16"></path>
-                    </svg>
-                </summary>
-                <div class="export-menu-items">
-                    <span>Klargjør eksport...</span>
-                </div>
-            </details>
-            """
-
-    return export_menu, export_menu_placeholder
+@app.function
+def export_menu(_excel_filename, _png_filename):
+    return f"""
+        <details class="export-menu">
+            <summary aria-label="Eksporter figur" title="Eksporter figur">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h16"></path>
+                    <path d="M4 12h16"></path>
+                    <path d="M4 17h16"></path>
+                </svg>
+            </summary>
+            <div class="export-menu-items">
+                <a href="exports/{_excel_filename}" download>Excel</a>
+                <a href="exports/{_png_filename}" download>PNG</a>
+            </div>
+        </details>
+    """
 
 
 @app.cell
@@ -443,6 +171,15 @@ def _(mo):
                 color: #0b2b66;
             }
         </style>
+        <script>
+            document.addEventListener("click", (event) => {
+                document.querySelectorAll(".export-menu[open]").forEach((menu) => {
+                    if (!menu.contains(event.target)) {
+                        menu.removeAttribute("open");
+                    }
+                });
+            });
+        </script>
         <div style="margin-bottom: 20px;">
             <div style="font-size: 2.2rem; font-weight: 700; color: #0b2b66;">
                 Mobilanalyse marked
@@ -450,90 +187,6 @@ def _(mo):
         </div>
         """
     )
-    return
-
-
-@app.cell
-def _(
-    export_menu,
-    fig1_abonnement_fig,
-    fig1_omsetning_fig,
-    fig2_abonnement_fig,
-    fig2_omsetning_fig,
-    fig3_business_fig,
-    fig3_private_fig,
-    market_share_abonnement,
-    market_share_abonnement_projection,
-    market_share_abonnement_segment,
-    market_share_omsetning,
-    market_share_omsetning_projection,
-    mo,
-    pl,
-    projection_export_data,
-):
-    _updates = [
-        export_menu(
-            "fig1-abonnement-export",
-            market_share_abonnement,
-            "figur-1-abonnement.xlsx",
-            "Figur 1 - Markedsandeler basert på abonnement",
-            "Abonnement",
-            fig1_abonnement_fig,
-            "figur-1-abonnement.png",
-        ),
-        export_menu(
-            "fig1-omsetning-export",
-            market_share_omsetning,
-            "figur-1-omsetning.xlsx",
-            "Figur 1 - Markedsandeler basert på omsetning",
-            "Omsetning",
-            fig1_omsetning_fig,
-            "figur-1-omsetning.png",
-        ),
-        export_menu(
-            "fig2-abonnement-export",
-            projection_export_data(
-                market_share_abonnement,
-                market_share_abonnement_projection,
-            ),
-            "figur-2-abonnement-trend.xlsx",
-            "Figur 2 - Lineær trend basert på abonnement",
-            "Abonnement trend",
-            fig2_abonnement_fig,
-            "figur-2-abonnement-trend.png",
-        ),
-        export_menu(
-            "fig2-omsetning-export",
-            projection_export_data(
-                market_share_omsetning,
-                market_share_omsetning_projection,
-            ),
-            "figur-2-omsetning-trend.xlsx",
-            "Figur 2 - Lineær trend basert på omsetning",
-            "Omsetning trend",
-            fig2_omsetning_fig,
-            "figur-2-omsetning-trend.png",
-        ),
-        export_menu(
-            "fig3-privat-export",
-            market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
-            "figur-3-privat.xlsx",
-            "Figur 3 - Abonnement i privatmarkedet",
-            "Privat",
-            fig3_private_fig,
-            "figur-3-privat.png",
-        ),
-        export_menu(
-            "fig3-bedrift-export",
-            market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
-            "figur-3-bedrift.xlsx",
-            "Figur 3 - Abonnement i bedriftsmarkedet",
-            "Bedrift",
-            fig3_business_fig,
-            "figur-3-bedrift.png",
-        ),
-    ]
-    mo.Html("\n".join(_updates))
     return
 
 
@@ -653,7 +306,6 @@ def _(df, pl):
 
 @app.cell
 def _(
-    export_menu_placeholder,
     figure_with_export,
     market_share_abonnement,
     market_share_omsetning,
@@ -780,8 +432,8 @@ def _(
 
     fig1_abonnement_fig = _plot_market_share(market_share_abonnement, 60)
     fig1_omsetning_fig = _plot_market_share(market_share_omsetning, 60)
-    _abonnement_export = export_menu_placeholder("fig1-abonnement-export")
-    _omsetning_export = export_menu_placeholder("fig1-omsetning-export")
+    _abonnement_export = export_menu("figur-1-abonnement.xlsx", "figur-1-abonnement.png")
+    _omsetning_export = export_menu("figur-1-omsetning.xlsx", "figur-1-omsetning.png")
 
     _summary = mo.Html(
         f"""
@@ -836,7 +488,7 @@ def _(
         ],
         gap=2,
     )
-    return fig1_abonnement_fig, fig1_omsetning_fig
+    return
 
 
 @app.cell
@@ -905,7 +557,6 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 
 @app.cell
 def _(
-    export_menu_placeholder,
     figure_with_export,
     market_share_abonnement,
     market_share_abonnement_projection,
@@ -1052,8 +703,14 @@ def _(
         "Omsetning",
         60,
     )
-    _abonnement_projection_export = export_menu_placeholder("fig2-abonnement-export")
-    _omsetning_projection_export = export_menu_placeholder("fig2-omsetning-export")
+    _abonnement_projection_export = export_menu(
+        "figur-2-abonnement-trend.xlsx",
+        "figur-2-abonnement-trend.png",
+    )
+    _omsetning_projection_export = export_menu(
+        "figur-2-omsetning-trend.xlsx",
+        "figur-2-omsetning-trend.png",
+    )
     _forecast_note = mo.Html(
         f"""
         <div style="
@@ -1105,7 +762,7 @@ def _(
         ],
         gap=1,
     )
-    return fig2_abonnement_fig, fig2_omsetning_fig, projection_export_data
+    return
 
 
 @app.cell
@@ -1174,14 +831,7 @@ def _(df, pl):
 
 
 @app.cell
-def _(
-    export_menu_placeholder,
-    figure_with_export,
-    market_share_abonnement_segment,
-    mo,
-    pl,
-    plt,
-):
+def _(figure_with_export, market_share_abonnement_segment, mo, pl, plt):
     _colors = {
         "Telenor": "#156082",
         "Telia": "#7030a0",
@@ -1300,8 +950,8 @@ def _(
     )
     fig3_private_fig = _plot_segment("Privat", 50)
     fig3_business_fig = _plot_segment("Bedrift")
-    _private_export = export_menu_placeholder("fig3-privat-export")
-    _business_export = export_menu_placeholder("fig3-bedrift-export")
+    _private_export = export_menu("figur-3-privat.xlsx", "figur-3-privat.png")
+    _business_export = export_menu("figur-3-bedrift.xlsx", "figur-3-bedrift.png")
     _summary = mo.Html(
         f"""
         <div style="
@@ -1355,90 +1005,6 @@ def _(
         ],
         gap=2,
     )
-    return fig3_business_fig, fig3_private_fig
-
-
-@app.cell
-def _(
-    export_menu,
-    fig1_abonnement_fig,
-    fig1_omsetning_fig,
-    fig2_abonnement_fig,
-    fig2_omsetning_fig,
-    fig3_business_fig,
-    fig3_private_fig,
-    market_share_abonnement,
-    market_share_abonnement_projection,
-    market_share_abonnement_segment,
-    market_share_omsetning,
-    market_share_omsetning_projection,
-    mo,
-    pl,
-    projection_export_data,
-):
-    _updates = [
-        export_menu(
-            "fig1-abonnement-export",
-            market_share_abonnement,
-            "figur-1-abonnement.xlsx",
-            "Figur 1 - Markedsandeler basert på abonnement",
-            "Abonnement",
-            fig1_abonnement_fig,
-            "figur-1-abonnement.png",
-        ),
-        export_menu(
-            "fig1-omsetning-export",
-            market_share_omsetning,
-            "figur-1-omsetning.xlsx",
-            "Figur 1 - Markedsandeler basert på omsetning",
-            "Omsetning",
-            fig1_omsetning_fig,
-            "figur-1-omsetning.png",
-        ),
-        export_menu(
-            "fig2-abonnement-export",
-            projection_export_data(
-                market_share_abonnement,
-                market_share_abonnement_projection,
-            ),
-            "figur-2-abonnement-trend.xlsx",
-            "Figur 2 - Lineær trend basert på abonnement",
-            "Abonnement trend",
-            fig2_abonnement_fig,
-            "figur-2-abonnement-trend.png",
-        ),
-        export_menu(
-            "fig2-omsetning-export",
-            projection_export_data(
-                market_share_omsetning,
-                market_share_omsetning_projection,
-            ),
-            "figur-2-omsetning-trend.xlsx",
-            "Figur 2 - Lineær trend basert på omsetning",
-            "Omsetning trend",
-            fig2_omsetning_fig,
-            "figur-2-omsetning-trend.png",
-        ),
-        export_menu(
-            "fig3-privat-export",
-            market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
-            "figur-3-privat.xlsx",
-            "Figur 3 - Abonnement i privatmarkedet",
-            "Privat",
-            fig3_private_fig,
-            "figur-3-privat.png",
-        ),
-        export_menu(
-            "fig3-bedrift-export",
-            market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
-            "figur-3-bedrift.xlsx",
-            "Figur 3 - Abonnement i bedriftsmarkedet",
-            "Bedrift",
-            fig3_business_fig,
-            "figur-3-bedrift.png",
-        ),
-    ]
-    mo.Html("\n".join(_updates))
     return
 
 
