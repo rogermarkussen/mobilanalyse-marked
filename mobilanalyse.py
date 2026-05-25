@@ -19,6 +19,7 @@ app = marimo.App(width="full")
 def _():
     from base64 import b64encode
     from io import BytesIO
+    from json import dumps
     from pathlib import Path
 
     import matplotlib.pyplot as plt
@@ -41,6 +42,7 @@ def _():
         Side,
         Workbook,
         b64encode,
+        dumps,
         mo,
         pl,
         plt,
@@ -71,9 +73,11 @@ def _(
     Side,
     Workbook,
     b64encode,
+    dumps,
     pl,
 ):
     def export_menu(
+        _menu_id,
         _data,
         _excel_filename,
         _title,
@@ -283,8 +287,8 @@ def _(
         )
         _png_payload = b64encode(_png_buffer.getvalue()).decode("ascii")
 
-        return f"""
-            <details class="export-menu">
+        _menu_html = f"""
+            <details id="{_menu_id}" class="export-menu">
                 <summary aria-label="Eksporter figur" title="Eksporter figur">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 7h16"></path>
@@ -305,7 +309,30 @@ def _(
             </details>
             """
 
-    return (export_menu,)
+        return (
+            "<script>"
+            f"const menu = document.getElementById({dumps(_menu_id)});"
+            f"if (menu) menu.outerHTML = {dumps(_menu_html)};"
+            "</script>"
+        )
+
+    def export_menu_placeholder(_menu_id):
+        return f"""
+            <details id="{_menu_id}" class="export-menu export-menu-loading">
+                <summary aria-label="Eksport klargjøres" title="Eksport klargjøres">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7h16"></path>
+                        <path d="M4 12h16"></path>
+                        <path d="M4 17h16"></path>
+                    </svg>
+                </summary>
+                <div class="export-menu-items">
+                    <span>Klargjør eksport...</span>
+                </div>
+            </details>
+            """
+
+    return export_menu, export_menu_placeholder
 
 
 @app.cell
@@ -400,6 +427,17 @@ def _(mo):
                 text-decoration: none;
             }
 
+            .export-menu-loading summary {
+                opacity: 0.45;
+            }
+
+            .export-menu-items span {
+                color: #64748b;
+                font-size: 0.82rem;
+                padding: 7px 10px;
+                white-space: nowrap;
+            }
+
             .export-menu-items a:hover {
                 background: #f4f7fa;
                 color: #0b2b66;
@@ -412,6 +450,90 @@ def _(mo):
         </div>
         """
     )
+    return
+
+
+@app.cell
+def _(
+    export_menu,
+    fig1_abonnement_fig,
+    fig1_omsetning_fig,
+    fig2_abonnement_fig,
+    fig2_omsetning_fig,
+    fig3_business_fig,
+    fig3_private_fig,
+    market_share_abonnement,
+    market_share_abonnement_projection,
+    market_share_abonnement_segment,
+    market_share_omsetning,
+    market_share_omsetning_projection,
+    mo,
+    pl,
+    projection_export_data,
+):
+    _updates = [
+        export_menu(
+            "fig1-abonnement-export",
+            market_share_abonnement,
+            "figur-1-abonnement.xlsx",
+            "Figur 1 - Markedsandeler basert på abonnement",
+            "Abonnement",
+            fig1_abonnement_fig,
+            "figur-1-abonnement.png",
+        ),
+        export_menu(
+            "fig1-omsetning-export",
+            market_share_omsetning,
+            "figur-1-omsetning.xlsx",
+            "Figur 1 - Markedsandeler basert på omsetning",
+            "Omsetning",
+            fig1_omsetning_fig,
+            "figur-1-omsetning.png",
+        ),
+        export_menu(
+            "fig2-abonnement-export",
+            projection_export_data(
+                market_share_abonnement,
+                market_share_abonnement_projection,
+            ),
+            "figur-2-abonnement-trend.xlsx",
+            "Figur 2 - Lineær trend basert på abonnement",
+            "Abonnement trend",
+            fig2_abonnement_fig,
+            "figur-2-abonnement-trend.png",
+        ),
+        export_menu(
+            "fig2-omsetning-export",
+            projection_export_data(
+                market_share_omsetning,
+                market_share_omsetning_projection,
+            ),
+            "figur-2-omsetning-trend.xlsx",
+            "Figur 2 - Lineær trend basert på omsetning",
+            "Omsetning trend",
+            fig2_omsetning_fig,
+            "figur-2-omsetning-trend.png",
+        ),
+        export_menu(
+            "fig3-privat-export",
+            market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
+            "figur-3-privat.xlsx",
+            "Figur 3 - Abonnement i privatmarkedet",
+            "Privat",
+            fig3_private_fig,
+            "figur-3-privat.png",
+        ),
+        export_menu(
+            "fig3-bedrift-export",
+            market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
+            "figur-3-bedrift.xlsx",
+            "Figur 3 - Abonnement i bedriftsmarkedet",
+            "Bedrift",
+            fig3_business_fig,
+            "figur-3-bedrift.png",
+        ),
+    ]
+    mo.Html("\n".join(_updates))
     return
 
 
@@ -531,7 +653,7 @@ def _(df, pl):
 
 @app.cell
 def _(
-    export_menu,
+    export_menu_placeholder,
     figure_with_export,
     market_share_abonnement,
     market_share_omsetning,
@@ -656,24 +778,10 @@ def _(
         else "Endring mellom siste perioder"
     )
 
-    _abonnement_fig = _plot_market_share(market_share_abonnement, 60)
-    _omsetning_fig = _plot_market_share(market_share_omsetning, 60)
-    _abonnement_export = export_menu(
-        market_share_abonnement,
-        "figur-1-abonnement.xlsx",
-        "Figur 1 - Markedsandeler basert på abonnement",
-        "Abonnement",
-        _abonnement_fig,
-        "figur-1-abonnement.png",
-    )
-    _omsetning_export = export_menu(
-        market_share_omsetning,
-        "figur-1-omsetning.xlsx",
-        "Figur 1 - Markedsandeler basert på omsetning",
-        "Omsetning",
-        _omsetning_fig,
-        "figur-1-omsetning.png",
-    )
+    fig1_abonnement_fig = _plot_market_share(market_share_abonnement, 60)
+    fig1_omsetning_fig = _plot_market_share(market_share_omsetning, 60)
+    _abonnement_export = export_menu_placeholder("fig1-abonnement-export")
+    _omsetning_export = export_menu_placeholder("fig1-omsetning-export")
 
     _summary = mo.Html(
         f"""
@@ -707,7 +815,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Basert på abonnement</div>'
                             ),
-                            figure_with_export(_abonnement_fig, _abonnement_export),
+                            figure_with_export(fig1_abonnement_fig, _abonnement_export),
                         ],
                         gap=0.5,
                     ),
@@ -716,7 +824,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Basert på omsetning</div>'
                             ),
-                            figure_with_export(_omsetning_fig, _omsetning_export),
+                            figure_with_export(fig1_omsetning_fig, _omsetning_export),
                         ],
                         gap=0.5,
                     ),
@@ -728,7 +836,7 @@ def _(
         ],
         gap=2,
     )
-    return
+    return fig1_abonnement_fig, fig1_omsetning_fig
 
 
 @app.cell
@@ -797,7 +905,7 @@ def _(market_share_abonnement, market_share_omsetning, pl):
 
 @app.cell
 def _(
-    export_menu,
+    export_menu_placeholder,
     figure_with_export,
     market_share_abonnement,
     market_share_abonnement_projection,
@@ -917,7 +1025,7 @@ def _(
         _year = _last_year + ((_threshold - _last_value) / _slope)
         return f"Lyse Tele (Ice) når {_threshold:.0f} % av omsetningen rundt {int(_year + 0.999)}."
 
-    def _projection_export_data(_actual, _projection):
+    def projection_export_data(_actual, _projection):
         _actual_export = _actual.with_columns(
             pl.lit("Historikk").alias("serie"),
             pl.col("ar").cast(pl.Int64),
@@ -932,34 +1040,20 @@ def _(
             .sort("serie", "ar", "tilbyder")
         )
 
-    _abonnement_projection_fig = _plot_projection(
+    fig2_abonnement_fig = _plot_projection(
         market_share_abonnement,
         market_share_abonnement_projection,
         "Abonnement",
         60,
     )
-    _omsetning_projection_fig = _plot_projection(
+    fig2_omsetning_fig = _plot_projection(
         market_share_omsetning,
         market_share_omsetning_projection,
         "Omsetning",
         60,
     )
-    _abonnement_projection_export = export_menu(
-        _projection_export_data(market_share_abonnement, market_share_abonnement_projection),
-        "figur-2-abonnement-trend.xlsx",
-        "Figur 2 - Lineær trend basert på abonnement",
-        "Abonnement trend",
-        _abonnement_projection_fig,
-        "figur-2-abonnement-trend.png",
-    )
-    _omsetning_projection_export = export_menu(
-        _projection_export_data(market_share_omsetning, market_share_omsetning_projection),
-        "figur-2-omsetning-trend.xlsx",
-        "Figur 2 - Lineær trend basert på omsetning",
-        "Omsetning trend",
-        _omsetning_projection_fig,
-        "figur-2-omsetning-trend.png",
-    )
+    _abonnement_projection_export = export_menu_placeholder("fig2-abonnement-export")
+    _omsetning_projection_export = export_menu_placeholder("fig2-omsetning-export")
     _forecast_note = mo.Html(
         f"""
         <div style="
@@ -990,7 +1084,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Abonnement</div>'
                             ),
-                            figure_with_export(_abonnement_projection_fig, _abonnement_projection_export),
+                            figure_with_export(fig2_abonnement_fig, _abonnement_projection_export),
                         ],
                         gap=0.5,
                     ),
@@ -999,7 +1093,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Omsetning</div>'
                             ),
-                            figure_with_export(_omsetning_projection_fig, _omsetning_projection_export),
+                            figure_with_export(fig2_omsetning_fig, _omsetning_projection_export),
                         ],
                         gap=0.5,
                     ),
@@ -1011,7 +1105,7 @@ def _(
         ],
         gap=1,
     )
-    return
+    return fig2_abonnement_fig, fig2_omsetning_fig, projection_export_data
 
 
 @app.cell
@@ -1081,7 +1175,7 @@ def _(df, pl):
 
 @app.cell
 def _(
-    export_menu,
+    export_menu_placeholder,
     figure_with_export,
     market_share_abonnement_segment,
     mo,
@@ -1204,24 +1298,10 @@ def _(
         if _prev_period is not None and _curr_period is not None
         else "Endring mellom siste perioder"
     )
-    _private_fig = _plot_segment("Privat", 50)
-    _business_fig = _plot_segment("Bedrift")
-    _private_export = export_menu(
-        market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
-        "figur-3-privat.xlsx",
-        "Figur 3 - Abonnement i privatmarkedet",
-        "Privat",
-        _private_fig,
-        "figur-3-privat.png",
-    )
-    _business_export = export_menu(
-        market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
-        "figur-3-bedrift.xlsx",
-        "Figur 3 - Abonnement i bedriftsmarkedet",
-        "Bedrift",
-        _business_fig,
-        "figur-3-bedrift.png",
-    )
+    fig3_private_fig = _plot_segment("Privat", 50)
+    fig3_business_fig = _plot_segment("Bedrift")
+    _private_export = export_menu_placeholder("fig3-privat-export")
+    _business_export = export_menu_placeholder("fig3-bedrift-export")
     _summary = mo.Html(
         f"""
         <div style="
@@ -1254,7 +1334,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Privat</div>'
                             ),
-                            figure_with_export(_private_fig, _private_export),
+                            figure_with_export(fig3_private_fig, _private_export),
                         ],
                         gap=0.5,
                     ),
@@ -1263,7 +1343,7 @@ def _(
                             mo.Html(
                                 '<div class="figure-heading-title">Bedrift</div>'
                             ),
-                            figure_with_export(_business_fig, _business_export),
+                            figure_with_export(fig3_business_fig, _business_export),
                         ],
                         gap=0.5,
                     ),
@@ -1275,6 +1355,90 @@ def _(
         ],
         gap=2,
     )
+    return fig3_business_fig, fig3_private_fig
+
+
+@app.cell
+def _(
+    export_menu,
+    fig1_abonnement_fig,
+    fig1_omsetning_fig,
+    fig2_abonnement_fig,
+    fig2_omsetning_fig,
+    fig3_business_fig,
+    fig3_private_fig,
+    market_share_abonnement,
+    market_share_abonnement_projection,
+    market_share_abonnement_segment,
+    market_share_omsetning,
+    market_share_omsetning_projection,
+    mo,
+    pl,
+    projection_export_data,
+):
+    _updates = [
+        export_menu(
+            "fig1-abonnement-export",
+            market_share_abonnement,
+            "figur-1-abonnement.xlsx",
+            "Figur 1 - Markedsandeler basert på abonnement",
+            "Abonnement",
+            fig1_abonnement_fig,
+            "figur-1-abonnement.png",
+        ),
+        export_menu(
+            "fig1-omsetning-export",
+            market_share_omsetning,
+            "figur-1-omsetning.xlsx",
+            "Figur 1 - Markedsandeler basert på omsetning",
+            "Omsetning",
+            fig1_omsetning_fig,
+            "figur-1-omsetning.png",
+        ),
+        export_menu(
+            "fig2-abonnement-export",
+            projection_export_data(
+                market_share_abonnement,
+                market_share_abonnement_projection,
+            ),
+            "figur-2-abonnement-trend.xlsx",
+            "Figur 2 - Lineær trend basert på abonnement",
+            "Abonnement trend",
+            fig2_abonnement_fig,
+            "figur-2-abonnement-trend.png",
+        ),
+        export_menu(
+            "fig2-omsetning-export",
+            projection_export_data(
+                market_share_omsetning,
+                market_share_omsetning_projection,
+            ),
+            "figur-2-omsetning-trend.xlsx",
+            "Figur 2 - Lineær trend basert på omsetning",
+            "Omsetning trend",
+            fig2_omsetning_fig,
+            "figur-2-omsetning-trend.png",
+        ),
+        export_menu(
+            "fig3-privat-export",
+            market_share_abonnement_segment.filter(pl.col("ms") == "Privat"),
+            "figur-3-privat.xlsx",
+            "Figur 3 - Abonnement i privatmarkedet",
+            "Privat",
+            fig3_private_fig,
+            "figur-3-privat.png",
+        ),
+        export_menu(
+            "fig3-bedrift-export",
+            market_share_abonnement_segment.filter(pl.col("ms") == "Bedrift"),
+            "figur-3-bedrift.xlsx",
+            "Figur 3 - Abonnement i bedriftsmarkedet",
+            "Bedrift",
+            fig3_business_fig,
+            "figur-3-bedrift.png",
+        ),
+    ]
+    mo.Html("\n".join(_updates))
     return
 
 
