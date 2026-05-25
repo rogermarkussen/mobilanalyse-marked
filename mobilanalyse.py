@@ -17,6 +17,7 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
+    from base64 import b64encode
     from io import BytesIO
     from pathlib import Path
 
@@ -39,6 +40,7 @@ def _():
         PatternFill,
         Side,
         Workbook,
+        b64encode,
         mo,
         pl,
         plt,
@@ -60,7 +62,18 @@ async def _(Path, pl, pyfetch):
 
 
 @app.cell
-def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
+def _(
+    Alignment,
+    Border,
+    BytesIO,
+    Font,
+    PatternFill,
+    Side,
+    Workbook,
+    b64encode,
+    mo,
+    pl,
+):
     def excel_download(_data, _filename, _title, _sheet_name="Data"):
         _is_trend_export = "serie" in _data.columns
         if _is_trend_export:
@@ -253,12 +266,24 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
 
         _buffer = BytesIO()
         _workbook.save(_buffer)
+        _payload = b64encode(_buffer.getvalue()).decode("ascii")
 
-        return mo.download(
-            data=_buffer.getvalue(),
-            filename=_filename,
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            label="\u00a0",
+        return mo.Html(
+            f"""
+            <a
+                class="excel-download"
+                href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{_payload}"
+                download="{_filename}"
+                aria-label="Last ned Excel"
+                title="Last ned Excel"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3v11"></path>
+                    <path d="M7.5 9.5 12 14l4.5-4.5"></path>
+                    <path d="M5 18h14"></path>
+                </svg>
+            </a>
+            """
         )
 
     return (excel_download,)
@@ -277,41 +302,33 @@ def _(mo):
                 line-height: 30px;
             }
 
-            button[download], a[download], body button {
+            .excel-download {
                 align-items: center !important;
-                background: #ffffff !important;
-                border: 1px solid #d6dde8 !important;
-                border-radius: 5px !important;
-                box-shadow: none !important;
-                color: #314155 !important;
-                cursor: pointer !important;
+                border-radius: 4px !important;
+                color: #5f6f82 !important;
                 display: inline-flex !important;
-                height: 24px !important;
+                height: 22px !important;
                 justify-content: center !important;
                 margin: 0 !important;
-                min-width: 0 !important;
-                max-width: 26px !important;
-                padding: 0 !important;
-                font-size: 0 !important;
-                line-height: 1.2 !important;
-                width: 26px !important;
+                text-decoration: none !important;
+                transform: translateY(1px);
+                width: 22px !important;
             }
 
-            button[download] span, a[download] span, body button span {
-                display: none !important;
-            }
-
-            button[download]:hover, a[download]:hover, body button:hover {
-                background: #f5f8fb !important;
-                border-color: #9fb0c4 !important;
+            .excel-download:hover {
+                background: #f4f7fa !important;
                 color: #0b2b66 !important;
             }
 
-            button[download] svg, a[download] svg, body button svg {
+            .excel-download svg {
                 color: currentColor !important;
-                height: 13px !important;
+                fill: none !important;
+                height: 14px !important;
                 stroke: currentColor !important;
-                width: 13px !important;
+                stroke-linecap: round !important;
+                stroke-linejoin: round !important;
+                stroke-width: 1.8 !important;
+                width: 14px !important;
             }
         </style>
         <div style="margin-bottom: 20px;">
