@@ -48,3 +48,19 @@ dist/
 
 Publiser hele `dist/`-mappen. Appen må serveres over HTTP, ikke åpnes direkte
 som `file://`, fordi WebAssembly-appen henter `data/mobil.parquet` via browseren.
+
+## Publisering på GitHub Pages
+
+Repoet har en GitHub Actions-workflow som bygger og publiserer appen til GitHub
+Pages ved push til `main`.
+
+Workflowen kjører:
+
+```bash
+uv sync --frozen
+./scripts/build-static.sh
+```
+
+Deretter publiseres `dist/` som Pages-artifact. `data/mobil.parquet` er et lite
+statisk snapshot som inngår i repoet slik at appen kan bygges uten tilgang til
+lokal database.
