@@ -136,7 +136,7 @@ def _(Alignment, Border, BytesIO, Font, PatternFill, Side, Workbook, mo, pl):
             data=_buffer.getvalue(),
             filename=_filename,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            label="",
+            label="\u00a0",
         )
 
     return (excel_download,)
@@ -150,7 +150,7 @@ def _(mo):
             .excel-heading-row {
                 align-items: center;
                 display: flex;
-                justify-content: space-between;
+                justify-content: flex-start;
                 gap: 12px;
                 margin-bottom: 8px;
                 width: 100%;
@@ -173,6 +173,10 @@ def _(mo):
                 padding: 0 !important;
                 font-size: 0 !important;
                 line-height: 1.2 !important;
+            }
+
+            button[download] span, a[download] span, body button span {
+                display: none !important;
             }
 
             button[download] svg, a[download] svg, body button svg {
@@ -633,7 +637,6 @@ def _(
                 },
             )
 
-        _ax.set_title(_title, fontsize=10, fontweight="bold", pad=12)
         _ax.set_ylim(0, _upper_y)
         _ax.set_yticks(range(0, _upper_y + 1, 10))
         _ax.set_yticklabels([_percent(_value) for _value in range(0, _upper_y + 1, 10)])
@@ -748,7 +751,8 @@ def _(
                                     ),
                                     _abonnement_projection_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.5,
                             ),
                             _abonnement_projection_fig,
                         ],
@@ -763,7 +767,8 @@ def _(
                                     ),
                                     _omsetning_projection_export,
                                 ],
-                                justify="space-between",
+                                justify="start",
+                                gap=0.5,
                             ),
                             _omsetning_projection_fig,
                         ],
