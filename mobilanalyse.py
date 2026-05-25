@@ -350,11 +350,11 @@ def _(mo):
                 color: #5f6f82 !important;
                 cursor: pointer;
                 display: inline-flex !important;
-                height: 30px !important;
+                height: 42px !important;
                 justify-content: center !important;
                 margin: 0 !important;
                 list-style: none;
-                width: 30px !important;
+                width: 42px !important;
             }
 
             .export-menu summary::-webkit-details-marker {
@@ -369,12 +369,12 @@ def _(mo):
             .export-menu svg {
                 color: currentColor !important;
                 fill: none !important;
-                height: 19px !important;
+                height: 28px !important;
                 stroke: currentColor !important;
                 stroke-linecap: round !important;
                 stroke-linejoin: round !important;
                 stroke-width: 1.8 !important;
-                width: 19px !important;
+                width: 28px !important;
             }
 
             .export-menu-items {
