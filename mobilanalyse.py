@@ -531,15 +531,15 @@ def _(market_share_abonnement, market_share_omsetning, pl):
                 if _denominator
                 else 0
             )
-            _intercept = _y_mean - _slope * _x_mean
             _last_year = int(max(_xs))
+            _last_value = _ys[-1]
 
-            for _year in range(int(min(_xs)), _last_year + _periods_ahead + 1):
+            for _year in range(_last_year, _last_year + _periods_ahead + 1):
                 _rows.append(
                     {
                         "ar": _year,
                         "tilbyder": _provider,
-                        "markedsandel": _intercept + _slope * _year,
+                        "markedsandel": _last_value + _slope * (_year - _last_year),
                     }
                 )
 
@@ -604,7 +604,7 @@ def _(
                 color=_colors[_provider],
                 linewidth=1.8,
                 linestyle=":",
-                label=f"Lineær ({_provider})",
+                label="_nolegend_",
             )
 
             _latest_actual = _actual_provider.filter(pl.col("ar") == _last_actual_year)
@@ -637,7 +637,9 @@ def _(
         _ax.set_ylim(0, _upper_y)
         _ax.set_yticks(range(0, _upper_y + 1, 10))
         _ax.set_yticklabels([_percent(_value) for _value in range(0, _upper_y + 1, 10)])
-        _ax.set_xticks(sorted(_projection["ar"].unique().to_list()))
+        _ax.set_xticks(
+            sorted(set(_actual["ar"].unique().to_list() + _projection["ar"].unique().to_list()))
+        )
         _ax.grid(axis="y", color="#d9d9d9", linewidth=0.8)
         _ax.grid(axis="x", visible=False)
         _ax.spines[["top", "right", "left"]].set_visible(False)
@@ -668,7 +670,9 @@ def _(
         )
         if _slope <= 0:
             return f"Lyse Tele (Ice) når ikke {_threshold:.0f} % omsetningsandel med lineær trend."
-        _year = (_threshold - (_y_mean - _slope * _x_mean)) / _slope
+        _last_year = max(_xs)
+        _last_value = _ys[-1]
+        _year = _last_year + ((_threshold - _last_value) / _slope)
         return f"Lyse Tele (Ice) når {_threshold:.0f} % av omsetningen rundt {int(_year + 0.999)}."
 
     def _projection_export_data(_actual, _projection):
