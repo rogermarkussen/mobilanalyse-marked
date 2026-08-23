@@ -78,10 +78,12 @@ def market_share_abonnement(df: pl.LazyFrame) -> pl.DataFrame:
 def market_share_omsetning(df: pl.LazyFrame) -> pl.DataFrame:
     return (
         df.filter(
-            (pl.col("dk") == "Mobiltelefoni")
+            (
+                ((pl.col("dk") == "Mobiltelefoni") & (pl.col("sk") == "Sluttbruker"))
+                | (pl.col("dk") == "Roaming")
+            )
             & (pl.col("hg") == "Inntekter")
             & (pl.col("tp") == "Sum")
-            & (pl.col("sk") == "Sluttbruker")
             & (pl.col("delar") == "Helår")
         )
         .with_columns(tilbyder=provider_group())
